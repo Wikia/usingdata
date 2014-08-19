@@ -1,0 +1,6 @@
+{
+	"@metadata": {
+		"authors": []
+	},
+	"usingdata-description": "Allows transclusion of data from individual pages as template arguments."
+}

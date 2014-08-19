@@ -33,3 +33,5 @@ function efUsingDataMagicVars(&$magicWords) {
 	$magicWords[] = 'selfname';
 	return true;
 }
+$wgMessagesDirs['UsingData']					= "{$extDir}/i18n";
+?>
