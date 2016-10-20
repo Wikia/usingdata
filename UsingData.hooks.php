@@ -119,7 +119,9 @@ class FXUsingData {
 			$dframe = $this->getDataFrame($title->getPrefixedText(), $title, $parser, $frame);
 			if (is_object($dframe) && $dframe->hasFragment($title->getFragment())) {
 				$ovr = array(); unset($args['default']);
-				foreach($args as $key => $val) $ovr[$key] = $parser->replaceVariables($val, $frame);
+				foreach ($args as $key => $val) {
+					$ovr[$key] = $parser->replaceVariables($val, $frame);
+				}
 				return $dframe->expandUsing($frame, $frame->title, $text, $ovr, $title->getFragment(), true);
 			}
 		}
@@ -142,8 +144,9 @@ class FXUsingData {
 		}
 
 		if ($frame->depth == 0 || $this->searchingForData) {
-			if (!isset($this->dataFrames[$hostPage]))
+			if (!isset($this->dataFrames[$hostPage])) {
 				$this->dataFrames[$hostPage] = new FXUsingDataPPFrame_DOM($frame, $hostPage);
+			}
 			$df =& $this->dataFrames[$hostPage];
 			$df->addArgs($frame, $args, $fragment);
 			if ($this->searchingForData) return '';
@@ -225,7 +228,7 @@ class FXUsingDataPPFrame_DOM extends PPFrame_DOM {
 		return str_replace('#', '# ', strtolower($fragment)).'##';
 	}
 	
-	function addArgs($frame, $args, $fragment) {
+	public function addArgs($frame, $args, $fragment) {
 		if (is_null($this->pendingArgs)) $this->pendingArgs = array();
 		
 		$namedArgs = array();
@@ -242,7 +245,7 @@ class FXUsingDataPPFrame_DOM extends PPFrame_DOM {
 		$this->knownFragments[$prefix] = true;
 	}
 	
-	function expandUsing(PPFrame $frame, $templateTitle, $text, $moreArgs, $fragment, $useRTP = false) {
+	public function expandUsing(PPFrame $frame, $templateTitle, $text, $moreArgs, $fragment, $useRTP = false) {
 		$oldParser = $this->expansionForParser;
 		$oldExpanded = $this->expandedArgs;
 		$oldArgs = $this->overrideArgs;
@@ -262,7 +265,7 @@ class FXUsingDataPPFrame_DOM extends PPFrame_DOM {
 		if (is_string($text) && $useRTP) {
 			$ret = $this->expansionForParser->replaceVariables($text, $this);
 		} else {
-			$ret = $this->expand($text);
+			$ret = $this->expand($text === null ? '' : $text);
 		}
 		
 		$this->overrideArgs = $oldArgs;
@@ -278,15 +281,15 @@ class FXUsingDataPPFrame_DOM extends PPFrame_DOM {
 		return $ret;
 	}
 
-	function hasFragment($fragment) {
+	public function hasFragment($fragment) {
 		return isset($this->knownFragments[self::normalizeFragment($fragment)]);
 	}
 
-	function isEmpty() {
+	public function isEmpty() {
 		return !isset($this->knownFragments[$this->expansionFragmentN]);
 	}
 
-	function getArgumentForParser($parser, $normalizedFragment, $arg, $default = false) {
+	public function getArgumentForParser($parser, $normalizedFragment, $arg, $default = false) {
 		$arg = $normalizedFragment . $arg;
 		if (isset($this->expandedArgs[$arg]) && $this->expansionForParser === $parser)
 			return $this->expandedArgs[$arg];
@@ -313,7 +316,7 @@ class FXUsingDataPPFrame_DOM extends PPFrame_DOM {
 		return $ret;
 	}
 
-	function getArgument( $index ) {
+	public function getArgument( $index ) {
 		switch($index) {
 			case 'data-found':   return $this->isEmpty() ? null : '1';
 			case 'data-source':  return $this->sourcePage;
