@@ -1,8 +1,8 @@
 <?php
 
-$dir = dirname(__FILE__) . '/';
-$wgAutoloadClasses['FXUsingData'] = $dir . 'UsingData.hooks.php';
-$wgExtensionMessagesFiles['UsingData'] = $dir . 'UsingData.i18n.php';
+$extDir = __DIR__;
+$wgAutoloadClasses['FXUsingData'] = $extDir . 'UsingData.hooks.php';
+$wgExtensionMessagesFiles['UsingData'] = $extDir . 'UsingData.i18n.php';
 $wgExtensionCredits['parserhook'][] = array(
 	'name' => 'UsingData',
 	'author' => 'foxlit',
