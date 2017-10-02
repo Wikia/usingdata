@@ -1,8 +1,8 @@
 <?php
 
 $extDir = __DIR__;
-$wgAutoloadClasses['FXUsingData'] = $extDir . 'UsingData.hooks.php';
-$wgExtensionMessagesFiles['UsingData'] = $extDir . 'UsingData.i18n.php';
+$wgAutoloadClasses['FXUsingData'] = $extDir.'/UsingData.hooks.php';
+$wgExtensionMessagesFiles['UsingData'] = $extDir.'/UsingData.i18n.php';
 $wgExtensionCredits['parserhook'][] = array(
 	'name' => 'UsingData',
 	'author' => 'foxlit',
@@ -34,4 +34,3 @@ function efUsingDataMagicVars(&$magicWords) {
 	return true;
 }
 $wgMessagesDirs['UsingData']					= "{$extDir}/i18n";
-?>
