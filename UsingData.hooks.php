@@ -87,7 +87,7 @@ class FXUsingData {
 		if (!$dframe->hasFragment($fragment) && !is_null($defaultValue)) {
 			return $frame->expand($defaultValue);
 		}
-		list ($dom, $title) = $this->fetchTemplate($parser, $templateTitle);
+		list($dom, $title) = $this->fetchTemplate($parser, $templateTitle);
 		return $dframe->expandUsing($frame, $title, $dom, $namedArgs, $fragment);
 	}
 		

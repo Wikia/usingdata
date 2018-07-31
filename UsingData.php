@@ -1,36 +1,14 @@
 <?php
 
-$extDir = __DIR__;
-$wgAutoloadClasses['FXUsingData'] = $extDir.'/UsingData.hooks.php';
-$wgExtensionMessagesFiles['UsingData'] = $extDir.'/UsingData.i18n.php';
-$wgExtensionCredits['parserhook'][] = array(
-	'name' => 'UsingData',
-	'author' => 'foxlit',
-	'descriptionmsg' => 'usingdata-description',
-	'version' => '1.2.8',
-);
-$wgHooks['LanguageGetMagic'][] = 'efUsingDataMagic';
-$wgHooks['MagicWordwgVariableIDs'][] = 'efUsingDataMagicVars';
-$wgHooks['ParserFirstCallInit'][] = 'FXUsingData::onParserFirstCallInit';
-$wgHooks['ParserGetVariableValueSwitch'][] = 'FXUsingData::ancestorNameVar';
-
-
-function efUsingDataMagic(&$magicWords, $langCode) {
-	switch ($langCode) {
-		
-	default:
-		$magicWords['data'] = array(0, 'data');
-		$magicWords['using'] = array(0, 'using');
-		$magicWords['usingarg'] = array(0, 'usingarg');
-		$magicWords['ancestorname'] = array(0, 'ancestorname');
-		$magicWords['selfname'] = array(0, 'selfname');
-		$magicWords['parentname'] = array(0, 'parentname', 'ancestorname');
-	}
-	return true;
+if ( function_exists( 'wfLoadExtension' ) ) {
+	wfLoadExtension( 'UsingData' );
+	// Keep i18n globals so mergeMessageFileList.php doesn't break
+	$wgMessagesDirs['UsingData'] = __DIR__ . '/i18n';
+	wfWarn(
+		'Deprecated PHP entry point used for UsingData extension. Please use wfLoadExtension instead, ' .
+		'see https://www.mediawiki.org/wiki/Extension_registration for more details.'
+	);
+	return;
+ } else {
+	die( 'This version of the UsingData extension requires MediaWiki 1.25+' );
 }
-function efUsingDataMagicVars(&$magicWords) {
-	$magicWords[] = 'parentname';
-	$magicWords[] = 'selfname';
-	return true;
-}
-$wgMessagesDirs['UsingData']					= "{$extDir}/i18n";

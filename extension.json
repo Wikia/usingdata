@@ -1,0 +1,23 @@
+{
+	"name": "UsingData",
+	"version": "2.0.0-hydra",
+	"author": "foxlit",
+	"descriptionmsg": "usingdata-description",
+	"type": "parserhook",
+	"MessagesDirs": {
+		"UsingData": [
+			"i18n"
+		]
+	},
+	"ExtensionMessagesFiles": {
+		"UsingDataMagic": "UsingData.i18n.magic.php"
+	},
+	"AutoloadClasses": {
+		"FXUsingData": "UsingData.hooks.php"
+	},
+	"Hooks": {
+		"ParserFirstCallInit": "FXUsingData::onParserFirstCallInit",
+		"ParserGetVariableValueSwitch": "FXUsingData::ancestorNameVar"
+	},
+	"manifest_version": 1
+}
