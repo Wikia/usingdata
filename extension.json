@@ -17,6 +17,7 @@
 		"Foxlit\\UsingDataPPFrame_DOM": "classes/UsingDataPPFrame_DOM.php"
 	},
 	"Hooks": {
+		"BeforeParserFetchTemplateAndtitle": "Foxlit\\UsingData::onBeforeParserFetchTemplateAndtitle",
 		"MagicWordwgVariableIDs": "Foxlit\\UsingData::onMagicWordwgVariableIDs",
 		"ParserFirstCallInit": "Foxlit\\UsingData::onParserFirstCallInit",
 		"ParserGetVariableValueSwitch": "Foxlit\\UsingData::ancestorNameVar"

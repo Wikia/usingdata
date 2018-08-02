@@ -3,23 +3,25 @@
 namespace Foxlit;
 
 class UsingData {
+	static public $instance = null;
+
 	private $dataFrames = [];
+
 	private $searchingForData = false;
+
+	static private $phTitle = null;
 
 	/* Initialize parser hooks.
 	 */
 	static public function onParserFirstCallInit(&$parser) {
-		static $instance = null;
-
-		if ($instance == null) {
-			global $wgHooks;
-			$wgHooks['BeforeParserFetchTemplateAndtitle'][] = $instance = new self;
+		if (self::$instance === null) {
+			self::$instance = new self;
 		}
-		$parser->setFunctionHook( 'using', [$instance, 'usingParserFunction'], SFH_OBJECT_ARGS);
-		$parser->setFunctionHook( 'usingarg', [$instance, 'usingArgParserFunction'], SFH_OBJECT_ARGS);
-		$parser->setFunctionHook( 'data', [$instance, 'dataParserFunction'], SFH_OBJECT_ARGS);
-		$parser->setFunctionHook( 'ancestorname', 'Foxlit\UsingData::ancestorNameFunction', SFH_OBJECT_ARGS | SFH_NO_HASH);
-		$parser->setFunctionTagHook('using', [$instance, 'usingTag'], 0);
+		$parser->setFunctionHook('using', [self::$instance, 'usingParserFunction'], SFH_OBJECT_ARGS);
+		$parser->setFunctionHook('usingarg', [self::$instance, 'usingArgParserFunction'], SFH_OBJECT_ARGS);
+		$parser->setFunctionHook('data', [self::$instance, 'dataParserFunction'], SFH_OBJECT_ARGS);
+		$parser->setFunctionHook('ancestorname', [__CLASS__, 'ancestorNameFunction'], SFH_OBJECT_ARGS | SFH_NO_HASH);
+		$parser->setFunctionTagHook('using', [self::$instance, 'usingTag'], 0);
 
 		return true;
 	}
@@ -250,17 +252,15 @@ unset($args['default']);
 
 	/* Disable template expansion while looking for #data tags.
 	 */
-	public function onBeforeParserFetchTemplateAndtitle($parser, $title, &$skip, &$id) {
-		static $phTitle = null;
-
-		if (!$this->searchingForData) {
+	static public function onBeforeParserFetchTemplateAndtitle($parser, $title, &$skip, &$id) {
+		if (!self::$instance->searchingForData) {
 			return true;
 		}
-		if (is_null($phTitle)) {
-			$phTitle = \Title::newFromText('UsingDataPlaceholderTitle', NS_MEDIAWIKI);
+		if (is_null(self::$phTitle)) {
+			self::$phTitle = \Title::newFromText('UsingDataPlaceholderTitle', NS_MEDIAWIKI);
 		}
 
-		$title = $phTitle;
+		$title = self::$phTitle;
 		$skip = true;
 
 		return false;
