@@ -176,7 +176,7 @@ class UsingData {
 			$dframe = $this->getDataFrame($title->getPrefixedText(), $title, $parser, $frame);
 			if (is_object($dframe) && $dframe->hasFragment($title->getFragment())) {
 				$ovr = [];
-unset($args['default']);
+				unset($args['default']);
 				foreach ($args as $key => $val) {
 					$ovr[$key] = $parser->replaceVariables($val, $frame);
 				}
