@@ -18,7 +18,7 @@ class UsingData {
 		$parser->setFunctionHook( 'using', [$instance, 'usingParserFunction'], SFH_OBJECT_ARGS);
 		$parser->setFunctionHook( 'usingarg', [$instance, 'usingArgParserFunction'], SFH_OBJECT_ARGS);
 		$parser->setFunctionHook( 'data', [$instance, 'dataParserFunction'], SFH_OBJECT_ARGS);
-		$parser->setFunctionHook( 'ancestorname', 'FXUsingData::ancestorNameFunction', SFH_OBJECT_ARGS | SFH_NO_HASH);
+		$parser->setFunctionHook( 'ancestorname', 'Foxlit\UsingData::ancestorNameFunction', SFH_OBJECT_ARGS | SFH_NO_HASH);
 		$parser->setFunctionTagHook('using', [$instance, 'usingTag'], 0);
 
 		return true;
