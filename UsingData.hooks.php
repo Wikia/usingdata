@@ -1,16 +1,19 @@
 <?php
-class FXUsingData {
+
+namespace Foxlit;
+
+class UsingData {
 	private $dataFrames = [];
 	private $searchingForData = false;
 
 	/* Initialize parser hooks.
 	 */
-	public static function onParserFirstCallInit(&$parser) {
+	static public function onParserFirstCallInit(&$parser) {
 		static $instance = null;
 
 		if ($instance == null) {
 			global $wgHooks;
-			$wgHooks['BeforeParserFetchTemplateAndtitle'][] = $instance = new FXUsingData;
+			$wgHooks['BeforeParserFetchTemplateAndtitle'][] = $instance = new self;
 		}
 		$parser->setFunctionHook( 'using', [$instance, 'usingParserFunction'], SFH_OBJECT_ARGS);
 		$parser->setFunctionHook( 'usingarg', [$instance, 'usingArgParserFunction'], SFH_OBJECT_ARGS);
@@ -27,7 +30,7 @@ class FXUsingData {
 	 * @access	public
 	 * @return	void
 	 */
-	public static function onMagicWordwgVariableIDs(&$magicWords) {
+	static public function onMagicWordwgVariableIDs(&$magicWords) {
 		$magicWords[] = 'parentname';
 		$magicWords[] = 'selfname';
 	}
@@ -37,7 +40,7 @@ class FXUsingData {
 	private function getDataFrame($sourcePage, $title, &$parser, $frame) {
 		global $wgHooks;
 		if (!isset($this->dataFrames[$sourcePage])) {
-			$this->dataFrames[$sourcePage] = new FXUsingDataPPFrame_DOM($frame, $sourcePage);
+			$this->dataFrames[$sourcePage] = new UsingDataPPFrame_DOM($frame, $sourcePage);
 			if ($sourcePage != '' && ($sourcePage != $parser->getTitle()->getPrefixedText()) || $parser->getOptions()->getIsSectionPreview()) {
 				list($text, $fTitle) = $parser->fetchTemplateAndTitle($title);
 				if (is_object($fTitle) && $fTitle->getPrefixedText() != $sourcePage) {
@@ -95,7 +98,7 @@ class FXUsingData {
 		if (strpos($titleArg, '%') !== false) {
 			$titleArg = str_replace(['<', '>'], ['&lt;', '&gt;'], urldecode($titleArg));
 		}
-		$title = Title::newFromText($titleArg, NS_MAIN);
+		$title = \Title::newFromText($titleArg, NS_MAIN);
 		$sourcePage = is_object($title) ? $title->getPrefixedText() : '';
 		$sourceHash = is_object($title) ? $title->getFragment() : '';
 		$namedArgs = [];
@@ -145,7 +148,7 @@ class FXUsingData {
 		}
 
 		list($dframe, $fragment, $namedArgs, $argName, $defaultValue) = $parse;
-		$ret = $dframe->getArgumentForParser($parser, FXUsingDataPPFrame_DOM::normalizeFragment($fragment), $argName, is_null($defaultValue) ? '' : false);
+		$ret = $dframe->getArgumentForParser($parser, UsingDataPPFrame_DOM::normalizeFragment($fragment), $argName, is_null($defaultValue) ? '' : false);
 		return $ret !== false ? $ret : $frame->expand($defaultValue);
 	}
 
@@ -156,7 +159,7 @@ class FXUsingData {
 	 * insertStripItem directly, is a viable short-term alternative -- but one that call certain hooks prematurely,
 	 * potentially causing other extensions to misbehave slightly.
 	 */
-	public function usingTag( Parser &$parser, PPFrame $frame, $text, $args) {
+	public function usingTag(\Parser &$parser, \PPFrame $frame, $text, $args) {
 		if ($this->searchingForData) {
 			return '';
 		}
@@ -166,7 +169,7 @@ class FXUsingData {
 		if (strpos($source, '%') !== false) {
 			$source = str_replace(['<', '>'], ['&lt;', '&gt;'], urldecode($source));
 		}
-		$title = Title::newFromText($source, NS_MAIN);
+		$title = \Title::newFromText($source, NS_MAIN);
 		if (is_object($title)) {
 			$dframe = $this->getDataFrame($title->getPrefixedText(), $title, $parser, $frame);
 			if (is_object($dframe) && $dframe->hasFragment($title->getFragment())) {
@@ -193,7 +196,7 @@ unset($args['default']);
 			$templateTitle = str_replace(['<', '>'], ['&lt;', '&gt;'], urldecode($templateTitle));
 		}
 
-		$templateTitleObj = Title::newFromText($templateTitle, NS_TEMPLATE);
+		$templateTitleObj = \Title::newFromText($templateTitle, NS_TEMPLATE);
 		if (is_object($templateTitleObj)) {
 			$fragment = $templateTitleObj->getFragment();
 		} elseif ($templateTitle != '' && $templateTitle[0] == '#') {
@@ -202,7 +205,7 @@ unset($args['default']);
 
 		if ($frame->depth == 0 || $this->searchingForData) {
 			if (!isset($this->dataFrames[$hostPage])) {
-				$this->dataFrames[$hostPage] = new FXUsingDataPPFrame_DOM($frame, $hostPage);
+				$this->dataFrames[$hostPage] = new UsingDataPPFrame_DOM($frame, $hostPage);
 			}
 			$df =& $this->dataFrames[$hostPage];
 			$df->addArgs($frame, $args, $fragment);
@@ -237,7 +240,7 @@ unset($args['default']);
 			return '';
 		}
 
-		$title = is_object($template) ? $template : Title::newFromText($template, NS_TEMPLATE);
+		$title = is_object($template) ? $template : \Title::newFromText($template, NS_TEMPLATE);
 		if (!is_object($title) || $title->getNamespace() == NS_SPECIAL || ($wgNonincludableNamespaces && in_array( $title->getNamespace(), $wgNonincludableNamespaces))) {
 			return is_object($title) ? ['[[:'.$title->getPrefixedText().']]', $title] : ['[[:'.$template.']]', null];
 		}
@@ -254,154 +257,12 @@ unset($args['default']);
 			return true;
 		}
 		if (is_null($phTitle)) {
-			$phTitle = Title::newFromText('UsingDataPlaceholderTitle', NS_MEDIAWIKI);
+			$phTitle = \Title::newFromText('UsingDataPlaceholderTitle', NS_MEDIAWIKI);
 		}
 
 		$title = $phTitle;
 		$skip = true;
 
 		return false;
-	}
-}
-
-class FXUsingDataPPFrame_DOM extends PPFrame_DOM {
-	var $parent, $sourcePage; // Parent frame (either from #using or #data, providing a parser if needed), data source title
-	var $knownFragments = []; // Specifies which fragments have been declared
-	var $pendingArgs = null; // Pending argument lists
-	var $serializedArgs = []; // Serialized wikitext cache for generic parsers
-	var $expandedArgs = [], $expansionForParser = null; // Expanded wikitext cache for a specific parser
-	var $overrideArgs = null, $overrideFrame = null; // Argument list and frame for expanding additional argument passed through #using
-	var $expansionFragment = '', $expansionFragmentN = '##'; // Current expansion fragment; pure and normalized (prefix) form
-
-	function __construct(PPFrame $inner, $pageName) {
-		PPFrame_DOM::__construct($inner->preprocessor);
-		$this->args = [];
-		$this->parent = $inner;
-		$this->depth = $inner->depth + 1;
-		$this->title = $inner->title;
-		$this->sourcePage = $pageName;
-	}
-
-	static function normalizeFragment($fragment) {
-		return str_replace('#', '# ', strtolower($fragment)).'##';
-	}
-
-	public function addArgs($frame, $args, $fragment) {
-		if (is_null($this->pendingArgs)) {
-			$this->pendingArgs = [];
-		}
-
-		$namedArgs = [];
-		$prefix = self::normalizeFragment($fragment);
-		foreach ($args as $k => $arg) {
-			if ($k == 0) {
-				continue;
-			}
-			$arg = $arg->splitArg();
-			if ($arg['index'] === '') {
-				$namedArgs[$prefix . trim($frame->expand($arg['name']))] = $arg['value'];
-			}
-		}
-
-		$this->pendingArgs[] = [$frame, $namedArgs];
-		$this->knownFragments[$prefix] = true;
-	}
-
-	public function expandUsing(PPFrame $frame, $templateTitle, $text, $moreArgs, $fragment, $useRTP = false) {
-		$oldParser = $this->expansionForParser;
-		$oldExpanded = $this->expandedArgs;
-		$oldArgs = $this->overrideArgs;
-		$oldFrame = $this->overrideFrame;
-		$oldFragment = $this->expansionFragment;
-		$oldTitle =& $this->title;
-
-		$this->expansionForParser = $frame->parser;
-		$this->expansionFragment = $fragment;
-		$this->overrideArgs = $moreArgs;
-		$this->overrideFrame = $frame;
-		$this->expansionFragmentN = self::normalizeFragment($this->expansionFragment);
-		$this->title = is_object($templateTitle) ? $templateTitle : $frame->title;
-		if ($oldParser != null && $oldParser !== $frame->parser && !empty($this->expandedArgs))
-			$this->expandedArgs = [];
-
-		if (is_string($text) && $useRTP) {
-			$ret = $this->expansionForParser->replaceVariables($text, $this);
-		} else {
-			$ret = $this->expand($text === null ? '' : $text);
-		}
-
-		$this->overrideArgs = $oldArgs;
-		$this->expansionFragment = $oldFragment;
-		$this->overrideFrame = $oldFrame;
-		$this->expansionFragmentN = self::normalizeFragment($this->expansionFragment);
-		$this->title =& $oldTitle;
-		if ($oldParser != null) {
-			$this->expansionForParser = $oldParser;
-			$this->expandedArgs = $oldExpanded;
-		}
-
-		return $ret;
-	}
-
-	public function hasFragment($fragment) {
-		return isset($this->knownFragments[self::normalizeFragment($fragment)]);
-	}
-
-	public function isEmpty() {
-		return !isset($this->knownFragments[$this->expansionFragmentN]);
-	}
-
-	public function getArgumentForParser($parser, $normalizedFragment, $arg, $default = false) {
-		$arg = $normalizedFragment . $arg;
-		if (isset($this->expandedArgs[$arg]) && $this->expansionForParser === $parser)
-			return $this->expandedArgs[$arg];
-		if (!isset($this->serializedArgs[$arg])) {
-			if (is_null($this->pendingArgs)) {
-				return $default;
-			}
-			foreach ($this->pendingArgs as &$aar) {
-				if (isset($aar[1][$arg])) {
-					$text = $aar[1][$arg];
-unset($aar[1][$arg]);
-					$text = $aar[0]->expand($text);
-					if (strpos($text, $aar[0]->parser->uniqPrefix()) !== false) {
-						$text = $aar[0]->parser->serialiseHalfParsedText(' '.$text); // MW bug 26731
-					}
-					$this->serializedArgs[$arg] = $text;
-					break;
-				}
-			}
-		}
-
-		if (!isset($this->serializedArgs[$arg])) return $default;
-
-		$ret = $this->serializedArgs[$arg];
-		$ret = trim(is_array($ret) ? $parser->unserialiseHalfParsedText($ret) : $ret);
-		if ($parser === $this->expansionForParser) $this->expandedArgs[$arg] = $ret;
-		return $ret;
-	}
-
-	public function getArgument( $index ) {
-		switch ($index) {
-			case 'data-found':
-				return $this->isEmpty() ? null : '1';
-			case 'data-source':
-				return $this->sourcePage;
-			case 'data-sourcee':
-				return wfEscapeWikiText($this->sourcePage);
-			case 'data-fragment':
-				return $this->expansionFragment;
-			case 'data-source-fragment':
-				return $this->sourcePage . (empty($this->expansionFragment) ? '' : ('#' . $this->expansionFragment));
-			default:
-				if (is_array($this->overrideArgs) && isset($this->overrideArgs[$index])) {
-					if (is_object($this->overrideArgs[$index])) {
-						$this->overrideArgs[$index] = $this->overrideFrame->expand($this->overrideArgs[$index]);
-					}
-					return $this->overrideArgs[$index];
-				}
-				$p = is_null($this->expansionForParser) ? $this->parent->parser : $this->expansionForParser;
-				return $this->getArgumentForParser($p, $this->expansionFragmentN, $index, false);
-		}
 	}
 }

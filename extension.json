@@ -13,12 +13,13 @@
 		"UsingDataMagic": "UsingData.i18n.magic.php"
 	},
 	"AutoloadClasses": {
-		"FXUsingData": "UsingData.hooks.php"
+		"Foxlit\\UsingData": "UsingData.hooks.php",
+		"Foxlit\\UsingDataPPFrame_DOM": "classes/UsingDataPPFrame_DOM.php"
 	},
 	"Hooks": {
-		"MagicWordwgVariableIDs": "FXUsingData::onMagicWordwgVariableIDs",
-		"ParserFirstCallInit": "FXUsingData::onParserFirstCallInit",
-		"ParserGetVariableValueSwitch": "FXUsingData::ancestorNameVar"
+		"MagicWordwgVariableIDs": "Foxlit\\UsingData::onMagicWordwgVariableIDs",
+		"ParserFirstCallInit": "Foxlit\\UsingData::onParserFirstCallInit",
+		"ParserGetVariableValueSwitch": "Foxlit\\UsingData::ancestorNameVar"
 	},
 	"manifest_version": 1
 }
