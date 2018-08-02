@@ -59,8 +59,9 @@ class UsingDataPPFrame_DOM extends \PPFrame_DOM {
 		$this->overrideFrame = $frame;
 		$this->expansionFragmentN = self::normalizeFragment($this->expansionFragment);
 		$this->title = is_object($templateTitle) ? $templateTitle : $frame->title;
-		if ($oldParser != null && $oldParser !== $frame->parser && !empty($this->expandedArgs))
+		if ($oldParser != null && $oldParser !== $frame->parser && !empty($this->expandedArgs)) {
 			$this->expandedArgs = [];
+		}
 
 		if (is_string($text) && $useRTP) {
 			$ret = $this->expansionForParser->replaceVariables($text, $this);
@@ -100,7 +101,7 @@ class UsingDataPPFrame_DOM extends \PPFrame_DOM {
 			foreach ($this->pendingArgs as &$aar) {
 				if (isset($aar[1][$arg])) {
 					$text = $aar[1][$arg];
-unset($aar[1][$arg]);
+					unset($aar[1][$arg]);
 					$text = $aar[0]->expand($text);
 					if (strpos($text, $aar[0]->parser->uniqPrefix()) !== false) {
 						$text = $aar[0]->parser->serialiseHalfParsedText(' '.$text); // MW bug 26731
@@ -111,11 +112,15 @@ unset($aar[1][$arg]);
 			}
 		}
 
-		if (!isset($this->serializedArgs[$arg])) return $default;
+		if (!isset($this->serializedArgs[$arg])) {
+			return $default;
+		}
 
 		$ret = $this->serializedArgs[$arg];
 		$ret = trim(is_array($ret) ? $parser->unserialiseHalfParsedText($ret) : $ret);
-		if ($parser === $this->expansionForParser) $this->expandedArgs[$arg] = $ret;
+		if ($parser === $this->expansionForParser) {
+			$this->expandedArgs[$arg] = $ret;
+		}
 		return $ret;
 	}
 
