@@ -16,6 +16,7 @@
 		"FXUsingData": "UsingData.hooks.php"
 	},
 	"Hooks": {
+		"MagicWordwgVariableIDs": "FXUsingData::onMagicWordwgVariableIDs",
 		"ParserFirstCallInit": "FXUsingData::onParserFirstCallInit",
 		"ParserGetVariableValueSwitch": "FXUsingData::ancestorNameVar"
 	},
