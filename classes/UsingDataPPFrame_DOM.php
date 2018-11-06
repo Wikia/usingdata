@@ -2,7 +2,11 @@
 
 namespace Foxlit;
 
-class UsingDataPPFrame_DOM extends \PPFrame_DOM {
+use Parser;
+use PPFrame;
+use PPFrame_DOM;
+
+class UsingDataPPFrame_DOM extends PPFrame_DOM {
 	public $parent, $sourcePage; // Parent frame (either from #using or #data, providing a parser if needed), data source title
 	public $knownFragments = []; // Specifies which fragments have been declared
 	public $pendingArgs = null; // Pending argument lists
@@ -11,8 +15,8 @@ class UsingDataPPFrame_DOM extends \PPFrame_DOM {
 	public $overrideArgs = null, $overrideFrame = null; // Argument list and frame for expanding additional argument passed through #using
 	public $expansionFragment = '', $expansionFragmentN = '##'; // Current expansion fragment; pure and normalized (prefix) form
 
-	public function __construct(\PPFrame $inner, $pageName) {
-		\PPFrame_DOM::__construct($inner->preprocessor);
+	public function __construct(PPFrame $inner, $pageName) {
+		PPFrame_DOM::__construct($inner->preprocessor);
 		$this->args = [];
 		$this->parent = $inner;
 		$this->depth = $inner->depth + 1;
@@ -45,7 +49,7 @@ class UsingDataPPFrame_DOM extends \PPFrame_DOM {
 		$this->knownFragments[$prefix] = true;
 	}
 
-	public function expandUsing(\PPFrame $frame, $templateTitle, $text, $moreArgs, $fragment, $useRTP = false) {
+	public function expandUsing(PPFrame $frame, $templateTitle, $text, $moreArgs, $fragment, $useRTP = false) {
 		$oldParser = $this->expansionForParser;
 		$oldExpanded = $this->expandedArgs;
 		$oldArgs = $this->overrideArgs;
@@ -103,7 +107,7 @@ class UsingDataPPFrame_DOM extends \PPFrame_DOM {
 					$text = $aar[1][$arg];
 					unset($aar[1][$arg]);
 					$text = $aar[0]->expand($text);
-					if (strpos($text, $aar[0]->parser->uniqPrefix()) !== false) {
+					if (strpos($text, Parser::MARKER_PREFIX) !== false) {
 						$text = $aar[0]->parser->serialiseHalfParsedText(' '.$text); // MW bug 26731
 					}
 					$this->serializedArgs[$arg] = $text;
