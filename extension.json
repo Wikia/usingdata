@@ -17,14 +17,14 @@
 		"UsingDataMagic": "UsingData.i18n.magic.php"
 	},
 	"AutoloadClasses": {
-		"Foxlit\\UsingData": "UsingData.hooks.php",
-		"Foxlit\\UsingDataPPFrame_DOM": "classes/UsingDataPPFrame_DOM.php"
+		"UsingDataHooks": "UsingDataHooks.php",
+		"UsingDataPPFrameDOM": "src/UsingDataPPFrameDOM.php"
 	},
 	"Hooks": {
-		"BeforeParserFetchTemplateAndtitle": "Foxlit\\UsingData::onBeforeParserFetchTemplateAndtitle",
-		"MagicWordwgVariableIDs": "Foxlit\\UsingData::onMagicWordwgVariableIDs",
-		"ParserFirstCallInit": "Foxlit\\UsingData::onParserFirstCallInit",
-		"ParserGetVariableValueSwitch": "Foxlit\\UsingData::ancestorNameVar"
+		"BeforeParserFetchTemplateRevisionRecord": "UsingDataHooks::onBeforeParserFetchTemplateRevisionRecord",
+		"GetMagicVariableIDs": "UsingDataHooks::onGetMagicVariableIDs",
+		"ParserFirstCallInit": "UsingDataHooks::onParserFirstCallInit",
+		"ParserGetVariableValueSwitch": "UsingDataHooks::ancestorNameVar"
 	},
 	"manifest_version": 1
 }
