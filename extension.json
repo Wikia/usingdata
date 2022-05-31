@@ -21,7 +21,7 @@
 		"UsingDataPPFrameDOM": "src/UsingDataPPFrameDOM.php"
 	},
 	"Hooks": {
-		"BeforeParserFetchTemplateRevisionRecord": "UsingDataHooks::onBeforeParserFetchTemplateRevisionRecord",
+		"BeforeParserFetchTemplateAndtitle": "UsingDataHooks::BeforeParserFetchTemplateAndtitle",
 		"GetMagicVariableIDs": "UsingDataHooks::onGetMagicVariableIDs",
 		"ParserFirstCallInit": "UsingDataHooks::onParserFirstCallInit",
 		"ParserGetVariableValueSwitch": "UsingDataHooks::ancestorNameVar"

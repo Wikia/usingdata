@@ -265,7 +265,7 @@ class UsingDataHooks {
 		return [ $dom ? $dom : ( '[[:' . $title->getPrefixedText() . ']]' ), $title ];
 	}
 
-	public static function onBeforeParserFetchTemplateRevisionRecord( ?LinkTarget $contextTitle, LinkTarget $title,
+	public static function onBeforeParserFetchTemplateAndtitle( ?LinkTarget $contextTitle, LinkTarget $title,
 																	  bool &$skip, ?RevisionRecord &$revRecord ): bool {
 		if ( !self::$instance->searchingForData ) {
 			return true;
