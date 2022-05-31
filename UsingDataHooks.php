@@ -119,9 +119,9 @@ class UsingDataHooks {
 			}
 			$bits = $val->splitArg();
 			// It looks like indexes are now integers, it is a change from legacy implementation
-			if ( $bits['index'] === 1 ) {
+			if ( $bits['index'] === '1' ) {
 				$one = $frame->expand( $bits['value'] );
-			} elseif ( $bits['index'] === 2 ) {
+			} elseif ( $bits['index'] === '2' ) {
 				$two = $bits['value'];
 			} elseif ( $bits['index'] === '' ) {
 				$namedArgs[trim( $frame->expand( $bits['name'] ) )] = $bits['value'];
@@ -232,7 +232,7 @@ class UsingDataHooks {
 		[ $dom, $tTitle ] = $this->fetchTemplate( $parser, $templateTitleObj );
 		foreach ( $args as $k => $v ) {
 			// Line below breaks #data processing, but it exists in old implementation
-			// $args[$k] = $v->node;
+			 $args[$k] = $v->node;
 		}
 		$cframe = $frame->newChild( $args, $tTitle );
 		$nargs =& $cframe->namedArgs;
