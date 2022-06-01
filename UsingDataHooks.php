@@ -16,7 +16,7 @@ class UsingDataHooks {
 		if ( self::$instance === null ) {
 			self::$instance = new self;
 		}
-		$parser->setFunctionHook( 'using', [ self::$instance, 'usingParserFunction' ], SFH_OBJECT_ARGS );
+//		$parser->setFunctionHook( 'using', [ self::$instance, 'usingParserFunction' ], SFH_OBJECT_ARGS );
 		$parser->setFunctionHook( 'usingarg', [ self::$instance, 'usingArgParserFunction' ], SFH_OBJECT_ARGS );
 		$parser->setFunctionHook( 'data', [ self::$instance, 'dataParserFunction' ], SFH_OBJECT_ARGS );
 		$parser->setFunctionHook( 'ancestorname', [ __CLASS__, 'ancestorNameFunction' ], SFH_OBJECT_ARGS | SFH_NO_HASH );
