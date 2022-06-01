@@ -173,7 +173,6 @@ class UsingDataHooks {
 	 * potentially causing other extensions to misbehave slightly.
 	 */
 	public function usingTag( $text, array $args, Parser $parser, PPFrame $frame ) {
-
 		if ( $this->searchingForData ) {
 			return ['', 'markerType' => 'none'];
 		}
@@ -192,11 +191,17 @@ class UsingDataHooks {
 				foreach ( $args as $key => $val ) {
 					$ovr[$key] = $parser->replaceVariables( $val, $frame );
 				}
-				return [$dframe->expandUsing( $frame, $frame->title, $text, $ovr, $title->getFragment(), true ), 'markerType' => 'none' ];
+				return [
+					$dframe->expandUsing( $frame, $frame->title, $text, $ovr, $title->getFragment(), true ),
+					'markerType' => 'none'
+				];
 			}
 		}
-		return [isset( $args['default'] ) ? $parser->replaceVariables( $args['default'], $frame ) : '', 'markerType'
-		=> 'none'];
+		
+		return [
+			isset( $args['default'] ) ? $parser->replaceVariables( $args['default'], $frame ) : '',
+			'markerType' => 'none'
+		];
 	}
 
 	/* {{#data:Template#Hash|...}} specifies data-transcludable arguments for the page; may not be transcluded. */
