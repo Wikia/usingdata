@@ -172,9 +172,9 @@ class UsingDataHooks {
 	 * insertStripItem directly, is a viable short-term alternative -- but one that call certain hooks prematurely,
 	 * potentially causing other extensions to misbehave slightly.
 	 */
-	public function usingTag( $text, array $args, Parser $parser, PPFrame $frame ): string {
+	public function usingTag( $text, array $args, Parser $parser, PPFrame $frame ) {
 		if ( $this->searchingForData ) {
-			return '';
+			return ['', 'markerType' => 'none'];
 		}
 
 		$source = isset( $args['page'] ) ? $parser->replaceVariables( $args['page'], $frame ) : '';
@@ -191,10 +191,17 @@ class UsingDataHooks {
 				foreach ( $args as $key => $val ) {
 					$ovr[$key] = $parser->replaceVariables( $val, $frame );
 				}
-				return $dframe->expandUsing( $frame, $frame->title, $text, $ovr, $title->getFragment(), true );
+				return [
+					$dframe->expandUsing( $frame, $frame->title, $text, $ovr, $title->getFragment(), true ),
+					'markerType' => 'none'
+				];
 			}
 		}
-		return isset( $args['default'] ) ? $parser->replaceVariables( $args['default'], $frame ) : '';
+		
+		return [
+			isset( $args['default'] ) ? $parser->replaceVariables( $args['default'], $frame ) : '',
+			'markerType' => 'none'
+		];
 	}
 
 	/* {{#data:Template#Hash|...}} specifies data-transcludable arguments for the page; may not be transcluded. */
