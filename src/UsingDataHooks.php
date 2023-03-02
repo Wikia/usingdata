@@ -1,5 +1,7 @@
 <?php
 
+namespace UsingData;
+
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Revision\RevisionRecord;
 
@@ -197,7 +199,7 @@ class UsingDataHooks {
 				];
 			}
 		}
-		
+
 		return [
 			isset( $args['default'] ) ? $parser->replaceVariables( $args['default'], $frame ) : '',
 			'markerType' => 'none'
