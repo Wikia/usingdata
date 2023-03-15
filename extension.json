@@ -1,12 +1,12 @@
 {
 	"name": "UsingData",
-	"version": "2.0.0-hydra",
+	"version": "2.1.0",
 	"author": "foxlit",
 	"descriptionmsg": "usingdata-description",
 	"license-name": "GPL-2.0-or-later",
 	"type": "parserhook",
 	"requires": {
-		"MediaWiki": ">= 1.29.0"
+		"MediaWiki": ">= 1.39.0"
 	},
 	"MessagesDirs": {
 		"UsingData": [
@@ -16,15 +16,20 @@
 	"ExtensionMessagesFiles": {
 		"UsingDataMagic": "UsingData.i18n.magic.php"
 	},
-	"AutoloadClasses": {
-		"UsingDataHooks": "UsingDataHooks.php",
-		"UsingDataPPFrameDOM": "src/UsingDataPPFrameDOM.php"
+	"AutoloadNamespaces": {
+		"UsingData\\": "src/"
+	},
+	"HookHandlers": {
+		"UsingDataHookHandler": {
+			"class": "UsingData\\UsingDataHooks",
+			"services": [ "MainConfig" ]
+		}
 	},
 	"Hooks": {
-		"BeforeParserFetchTemplateRevisionRecord": "UsingDataHooks::onBeforeParserFetchTemplateRevisionRecord",
-		"GetMagicVariableIDs": "UsingDataHooks::onGetMagicVariableIDs",
-		"ParserFirstCallInit": "UsingDataHooks::onParserFirstCallInit",
-		"ParserGetVariableValueSwitch": "UsingDataHooks::ancestorNameVar"
+		"BeforeParserFetchTemplateRevisionRecord": "UsingDataHookHandler",
+		"GetMagicVariableIDs": "UsingDataHookHandler",
+		"ParserFirstCallInit": "UsingDataHookHandler",
+		"ParserGetVariableValueSwitch": "UsingDataHookHandler"
 	},
 	"manifest_version": 1
 }

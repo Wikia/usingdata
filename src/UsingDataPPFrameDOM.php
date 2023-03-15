@@ -1,5 +1,11 @@
 <?php
 
+namespace UsingData;
+
+use Parser;
+use PPFrame;
+use PPFrame_Hash;
+
 class UsingDataPPFrameDOM extends PPFrame_Hash {
 	public $parent; // Parent frame (either from #using or #data, providing a parser if needed), data source title
 	public $sourcePage;
@@ -65,11 +71,9 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 			$this->expandedArgs = [];
 		}
 
-		if ( is_string( $text ) && $useRTP ) {
-			$ret = $this->expansionForParser->replaceVariables( $text, $this );
-		} else {
-			$ret = $this->expand( $text === null ? '' : $text );
-		}
+		$ret = is_string( $text ) && $useRTP ?
+			$this->expansionForParser->replaceVariables( $text, $this ) :
+			$this->expand( $text === null ? '' : $text );
 
 		$this->overrideArgs = $oldArgs;
 		$this->expansionFragment = $oldFragment;
@@ -106,7 +110,7 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 					$text = $aar[1][$arg];
 					unset( $aar[1][$arg] );
 					$text = $aar[0]->expand( $text );
-					if ( strpos( $text, Parser::MARKER_PREFIX ) !== false ) {
+					if ( str_contains( $text, Parser::MARKER_PREFIX ) ) {
 						$text = $aar[0]->parser->serialiseHalfParsedText( ' ' . $text ); // MW bug 26731
 					}
 					$this->serializedArgs[$arg] = $text;
@@ -138,7 +142,7 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 			case 'data-fragment':
 				return $this->expansionFragment;
 			case 'data-source-fragment':
-				return $this->sourcePage . ( empty( $this->expansionFragment ) ? '' : ( '#' . $this->expansionFragment ) );
+				return $this->sourcePage . ( empty( $this->expansionFragment ) ? '' : "#$this->expansionFragment" );
 			default:
 				if ( is_array( $this->overrideArgs ) && isset( $this->overrideArgs[$index] ) ) {
 					if ( is_object( $this->overrideArgs[$index] ) ) {
@@ -146,7 +150,7 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 					}
 					return $this->overrideArgs[$index];
 				}
-				$p = $this->expansionForParser === null ? $this->parent->parser : $this->expansionForParser;
+				$p = $this->expansionForParser ?? $this->parent->parser;
 				return $this->getArgumentForParser( $p, $this->expansionFragmentN, $index, false );
 		}
 	}
