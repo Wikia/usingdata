@@ -29,8 +29,7 @@
 		"BeforeParserFetchTemplateRevisionRecord": "UsingDataHookHandler",
 		"GetMagicVariableIDs": "UsingDataHookHandler",
 		"ParserFirstCallInit": "UsingDataHookHandler",
-		"ParserGetVariableValueSwitch": "UsingDataHookHandler",
-		"ParserClearState": "UsingDataHookHandler"
+		"ParserGetVariableValueSwitch": "UsingDataHookHandler"
 	},
 	"manifest_version": 1
 }

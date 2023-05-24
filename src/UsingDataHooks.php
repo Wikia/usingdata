@@ -5,7 +5,6 @@ namespace UsingData;
 use Config;
 use MediaWiki\Hook\BeforeParserFetchTemplateRevisionRecordHook;
 use MediaWiki\Hook\GetMagicVariableIDsHook;
-use MediaWiki\Hook\ParserClearStateHook;
 use MediaWiki\Hook\ParserFirstCallInitHook;
 use MediaWiki\Hook\ParserGetVariableValueSwitchHook;
 use MediaWiki\Linker\LinkTarget;
@@ -18,8 +17,7 @@ class UsingDataHooks implements
 	ParserFirstCallInitHook,
 	GetMagicVariableIDsHook,
 	BeforeParserFetchTemplateRevisionRecordHook,
-	ParserGetVariableValueSwitchHook,
-	ParserClearStateHook
+	ParserGetVariableValueSwitchHook
 {
 	public function __construct(
 		private Config $config,
@@ -53,8 +51,7 @@ class UsingDataHooks implements
 		if (
 			(
 				$sourcePage === '' ||
-				$sourcePage === Title::castFromPageReference( $parser->getPage() )
-					->getPrefixedText()
+				Title::castFromPageReference( $parser->getPage() )->getPrefixedText()
 			) && !$parser->getOptions()->getIsSectionPreview() ) {
 			return $this->dataFrames[$sourcePage];
 		}
@@ -64,27 +61,24 @@ class UsingDataHooks implements
 			$this->dataFrames[$fTitle->getPrefixedText()] = $this->dataFrames[$sourcePage];
 		}
 
+		global $wgHooks;
 		if ( is_string( $text ) && $text != '' ) {
 			$this->searchingForData = true;
-
+			$clearStateHooks = $wgHooks['ParserClearState'];
+			// Other extensions tend to assume the hook is only called by wgParser and reset internal state
+			$wgHooks['ParserClearState'] = [];
 			$subParser = clone $parser;
 			$subParser->preprocess( $text, $fTitle, clone $parser->getOptions() );
-
+			// We might've blocked access to templates while preprocessing; should not be cached
+			$subParser->clearState();
+			$subParser->getOutput()->setText( $parser->getOutput()->getText() );
+			$wgHooks['ParserClearState'] = empty( $wgHooks['ParserClearState'] )
+				? $clearStateHooks
+				: array_merge( $clearStateHooks, $wgHooks['ParserClearState'] );
 			$parser->mPPNodeCount += $subParser->mPPNodeCount;
-
 			$this->searchingForData = false;
-
 		}
 		return $this->dataFrames[$sourcePage];
-	}
-
-	/**
-	 * Reset handler state between parse() calls.
-	 * @param Parser $parser
-	 * @return void
-	 */
-	public function onParserClearState( $parser ): void {
-		$this->dataFrames = [];
 	}
 
 	/** Returns the page title of the $depth ancestor of $frame; empty string if invalid */
