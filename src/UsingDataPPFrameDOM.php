@@ -110,6 +110,9 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 					$text = $aar[1][$arg];
 					unset( $aar[1][$arg] );
 					$text = $aar[0]->expand( $text );
+					if ( str_contains( $text, Parser::MARKER_PREFIX ) ) {
+						$text = $aar[0]->parser->serialiseHalfParsedText( ' ' . $text ); // MW bug 26731
+					}
 					$this->serializedArgs[$arg] = $text;
 					break;
 				}
