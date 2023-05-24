@@ -44,7 +44,7 @@ class UsingDataHooks implements
 	}
 
 	/** Returns a UsingData frame for a given page */
-	private function getDataFrame( $sourcePage, ?Title $title, Parser &$parser, PPFrame $frame ) {
+	private function getDataFrame( $sourcePage, ?Title $title, Parser &$parser, PPFrame $frame ): UsingDataPPFrameDOM {
 		if ( isset( $this->dataFrames[$sourcePage] ) ) {
 			return $this->dataFrames[$sourcePage];
 		}
@@ -75,7 +75,7 @@ class UsingDataHooks implements
 			$this->searchingForData = false;
 
 		}
-		return $this->dataFrames[$sourcePage] ?? null;
+		return $this->dataFrames[$sourcePage];
 	}
 
 	/**
@@ -153,10 +153,6 @@ class UsingDataHooks implements
 		/** @var UsingDataPPFrameDOM $dframe */
 		[ $dframe, $fragment, $namedArgs, $templateTitle, $defaultValue ] = $this->usingParse( $parser, $frame, $args );
 
-		if ( !$dframe ) {
-			return '';
-		}
-
 		if ( !$dframe->hasFragment( $fragment ) && $defaultValue !== null ) {
 			return $frame->expand( $defaultValue );
 		}
@@ -203,7 +199,7 @@ class UsingDataHooks implements
 		$title = Title::newFromText( $this->sanitizeTitleName( $source ) );
 		if ( $title ) {
 			$dframe = $this->getDataFrame( $title->getPrefixedText(), $title, $parser, $frame );
-			if ( $dframe && $dframe->hasFragment( $title->getFragment() ) ) {
+			if ( $dframe->hasFragment( $title->getFragment() ) ) {
 				$ovr = [];
 				unset( $args['default'] );
 				foreach ( $args as $key => $val ) {

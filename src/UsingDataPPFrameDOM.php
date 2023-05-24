@@ -124,7 +124,6 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 		}
 
 		$ret = $this->serializedArgs[$arg];
-		$ret = trim( is_array( $ret ) ? $parser->unserialiseHalfParsedText( $ret ) : $ret );
 		if ( $parser === $this->expansionForParser ) {
 			$this->expandedArgs[$arg] = $ret;
 		}
