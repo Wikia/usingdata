@@ -2,6 +2,7 @@ name: PHPUnit / PHPCS / Phan
 on:
   pull_request:
     branches: '**'
+
   push:
     branches: [ master, REL1_39 ]
 
