@@ -26,6 +26,13 @@ Example Item
 {{#data:DataWrapper|prop_one=Test Prop One|prop_two=Test Prop Two}}
 !! endarticle
 
+!! article
+Template:UsingOwnData
+!! text
+{{#data:DataWrapper|prop_one=Green Leader|prop_two=Red Leader}}
+{{#using:Template:UsingOwnData|DataWrapper}}
+!! endarticle
+
 !! test
 #data parser function
 !! options
@@ -80,11 +87,20 @@ transcluded #using parser tag
 !! end
 
 !! test
-this one really should break
+Using data defined on the same page
 !! wikitext
-{{#using missing|MissingTemplate}}
+{{UsingOwnData}}
 !! html
-<div><span> Random text </span></div>
+<div id="tmpl-data-wrapper"><div id="prop-one">Green Leader</div><div id="prop-two">Red Leader</div></div>
+<div id="tmpl-data-wrapper"><div id="prop-one">Green Leader</div><div id="prop-two">Red Leader</div></div>
+!! end
+
+!! test
+Using data from a missing article
+!! wikitext
+<using page="Missing item">{{{prop_one}}}</using>
+!! html
+
 !! end
 
 
