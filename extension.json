@@ -17,7 +17,7 @@
 		"UsingDataMagic": "UsingData.i18n.magic.php"
 	},
 	"AutoloadClasses": {
-		"UsingDataHooks": "UsingDataHooks.php",
+		"UsingDataHooks": "src/UsingDataHooks.php",
 		"UsingDataPPFrameDOM": "src/UsingDataPPFrameDOM.php"
 	},
 	"Hooks": {
