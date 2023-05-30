@@ -78,3 +78,13 @@ transcluded #using parser tag
 <p>Test Prop One
 </p>
 !! end
+
+!! test
+this one really should break
+!! wikitext
+{{#using missing|MissingTemplate}}
+!! html
+<div><span> Random text </span></div>
+!! end
+
+
