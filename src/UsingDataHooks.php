@@ -1,7 +1,5 @@
 <?php
 
-namespace UsingData;
-
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Revision\RevisionRecord;
 
