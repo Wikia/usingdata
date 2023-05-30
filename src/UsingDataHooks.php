@@ -3,13 +3,28 @@
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Revision\RevisionRecord;
 
+/**
+ * Registers and defines parser functions for UsingData.
+ */
 class UsingDataHooks {
+	/**
+	 * @var UsingDataHooks Singleton instance
+	 */
 	public static $instance = null;
 
+	/**
+	 * @var UsingDataPPFrameDOM[] Data frames for each page
+	 */
 	private $dataFrames = [];
 
+	/**
+	 * @var bool Whether we are currently searching for data
+	 */
 	private $searchingForData = false;
 
+	/**
+	 * @var array|null Arguments to override
+	 */
 	private static $phTitle = null;
 
 	public static function onParserFirstCallInit( Parser &$parser ) {
@@ -19,7 +34,11 @@ class UsingDataHooks {
 		$parser->setFunctionHook( 'using', [ self::$instance, 'usingParserFunction' ], SFH_OBJECT_ARGS );
 		$parser->setFunctionHook( 'usingarg', [ self::$instance, 'usingArgParserFunction' ], SFH_OBJECT_ARGS );
 		$parser->setFunctionHook( 'data', [ self::$instance, 'dataParserFunction' ], SFH_OBJECT_ARGS );
-		$parser->setFunctionHook( 'ancestorname', [ __CLASS__, 'ancestorNameFunction' ], SFH_OBJECT_ARGS | SFH_NO_HASH );
+		$parser->setFunctionHook(
+			'ancestorname',
+			[ __CLASS__, 'ancestorNameFunction' ],
+			SFH_OBJECT_ARGS | SFH_NO_HASH
+		);
 		$parser->setHook( 'using', [ self::$instance, 'usingTag' ] );
 
 		return true;
@@ -35,7 +54,8 @@ class UsingDataHooks {
 		$magicWords[] = 'selfname';
 	}
 
-	/* Returns a UsingData frame for a given page
+	/**
+	 * Returns a UsingData frame for a given page
 	 */
 	private function getDataFrame( $sourcePage, $title, &$parser, $frame ) {
 		global $wgHooks;
@@ -71,7 +91,9 @@ class UsingDataHooks {
 		return $this->dataFrames[$sourcePage];
 	}
 
-	/* Returns the page title of the $depth ancestor of $frame; empty string if invalid */
+	/**
+	 * Returns the page title of the $depth ancestor of $frame; empty string if invalid
+	 */
 	private static function ancestorNameHandler( $frame, $depth ) {
 		while ( $depth-- && $frame != null ) {
 			$frame = $frame->parent ?? null;
@@ -80,13 +102,20 @@ class UsingDataHooks {
 			? wfEscapeWikiText( $frame->title->getPrefixedText() ) : '';
 	}
 
-	/* Handles {{ANCESTORNAME:depth}} */
+	/**
+	 * Handles {{ANCESTORNAME:depth}}
+	 */
 	public static function ancestorNameFunction( &$parser, $frame, $args ) {
 		$arg = $frame->expand( $args[0] );
-		return [ self::ancestorNameHandler( $frame, max( 0, is_numeric( $arg ) ? intval( $arg ) : 1 ) ), 'noparse' => true ];
+		return [
+			self::ancestorNameHandler( $frame, max( 0, is_numeric( $arg ) ? intval( $arg ) : 1 ) ),
+			'noparse' => true
+		];
 	}
 
-	/* Handles {{PARENTNAME}}, {{SELFNAME}}, {{ANCESTORNAME}} */
+	/**
+	 * Handles {{PARENTNAME}}, {{SELFNAME}}, {{ANCESTORNAME}}
+	 */
 	public static function ancestorNameVar( &$parser, &$varCache, &$index, &$ret, &$frame ) {
 		if ( $index == 'parentname' ) {
 			$ret = self::ancestorNameHandler( $frame, 1 );
@@ -97,7 +126,8 @@ class UsingDataHooks {
 		return true;
 	}
 
-	/* Parses common elements of #using syntax.
+	/**
+	 * Parses common elements of #using syntax.
 	 */
 	private function usingParse( &$parser, $frame, $args ) {
 		if ( $this->searchingForData ) {
@@ -132,7 +162,8 @@ class UsingDataHooks {
 		return [ $this->getDataFrame( $sourcePage, $title, $parser, $frame ), $sourceHash, $namedArgs, $one, $two ];
 	}
 
-	/* {{#using:Page#Hash|Template|Default|...}} parses Template using #data from Page's Hash fragment; or Default
+	/**
+	 * {{#using:Page#Hash|Template|Default|...}} parses Template using #data from Page's Hash fragment; or Default
 	 * if no data from Page can be found. Named arguments override those in the #data tag.
 	 */
 	public function usingParserFunction( &$parser, $frame, $args ) {
@@ -149,7 +180,9 @@ class UsingDataHooks {
 		return $dframe->expandUsing( $frame, $title, $dom, $namedArgs, $fragment );
 	}
 
-	/* {{#usingarg:Page#Hash|Arg|Default}} returns the value of Arg data field on Page's Hash fragment, Default if undefined.
+	/**
+	 * {{#usingarg:Page#Hash|Arg|Default}} returns the value of Arg data field on Page's Hash fragment, Default if
+	 * undefined.
 	 */
 	public function usingArgParserFunction( &$parser, $frame, $args ) {
 		$parse = $this->usingParse( $parser, $frame, $args );
@@ -167,16 +200,17 @@ class UsingDataHooks {
 		return $ret !== false ? $ret : $frame->expand( $defaultValue );
 	}
 
-	/* <using page="Page#Hash" default="Default">...</using>
+	/**
+	 * <using page="Page#Hash" default="Default">...</using>
 	 * expands ... using the data from Page's Hash fragment; Default if undefined.
 	 * This tag relies on $parser->replaceVariables($text, $frame), which may prove fragile across MW versions.
-	 * Should it break, $parser->recursiveTagParse($text, $frame), in combination with either modifying the markerType, or using
-	 * insertStripItem directly, is a viable short-term alternative -- but one that call certain hooks prematurely,
-	 * potentially causing other extensions to misbehave slightly.
+	 * Should it break, $parser->recursiveTagParse($text, $frame), in combination with either modifying the markerType,
+	 * or using insertStripItem directly, is a viable short-term alternative -- but one that call certain hooks
+	 * prematurely, potentially causing other extensions to misbehave slightly.
 	 */
 	public function usingTag( $text, array $args, Parser $parser, PPFrame $frame ) {
 		if ( $this->searchingForData ) {
-			return ['', 'markerType' => 'none'];
+			return [ '', 'markerType' => 'none' ];
 		}
 
 		$source = isset( $args['page'] ) ? $parser->replaceVariables( $args['page'], $frame ) : '';
@@ -206,7 +240,9 @@ class UsingDataHooks {
 		];
 	}
 
-	/* {{#data:Template#Hash|...}} specifies data-transcludable arguments for the page; may not be transcluded. */
+	/**
+	 * {{#data:Template#Hash|...}} specifies data-transcludable arguments for the page; may not be transcluded.
+	 */
 	public function dataParserFunction( Parser &$parser, PPFrame $frame, $args ) {
 		$templateTitle = trim( $frame->expand( $args[0] ) );
 		$hostPage = $frame->title->getPrefixedText();
@@ -253,7 +289,8 @@ class UsingDataHooks {
 		return $cframe->expand( $dom );
 	}
 
-	/* Returns template text for transclusion.
+	/**
+	 * Returns template text for transclusion.
 	 */
 	private function fetchTemplate( $parser, $template ) {
 		global $wgNonincludableNamespaces;
