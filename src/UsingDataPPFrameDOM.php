@@ -142,7 +142,7 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 			case 'data-fragment':
 				return $this->expansionFragment;
 			case 'data-source-fragment':
-				return $this->sourcePage . ( empty( $this->expansionFragment ) ? '' : "#$this->expansionFragment" );
+				return $this->sourcePage . ( empty( $this->expansionFragment ) ? '' : ( '#' . $this->expansionFragment ) );
 			default:
 				if ( is_array( $this->overrideArgs ) && isset( $this->overrideArgs[$index] ) ) {
 					if ( is_object( $this->overrideArgs[$index] ) ) {
@@ -150,7 +150,7 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 					}
 					return $this->overrideArgs[$index];
 				}
-				$p = $this->expansionForParser ?? $this->parent->parser;
+				$p = $this->expansionForParser === null ? $this->parent->parser : $this->expansionForParser;
 				return $this->getArgumentForParser( $p, $this->expansionFragmentN, $index, false );
 		}
 	}
