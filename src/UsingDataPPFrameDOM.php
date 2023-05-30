@@ -91,7 +91,7 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 	}
 
 	public function getArgumentForParser( $parser, $normalizedFragment, $arg, $default = false ) {
-		$arg = $normalizedFragment . $arg;
+		$arg = $normalizedFragment . strval( $arg );
 		if ( isset( $this->expandedArgs[$arg] ) && $this->expansionForParser === $parser ) {
 			return $this->expandedArgs[$arg];
 		}

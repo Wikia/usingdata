@@ -308,7 +308,7 @@ class UsingDataHooks {
 				: [ '[[:' . $template . ']]', null ];
 		}
 		[ $dom, $title ] = $parser->getTemplateDom( $title );
-		return [ $dom ? $dom : ( '[[:' . $title->getPrefixedText() . ']]' ), $title ];
+		return [ $dom ?: ( '[[:' . $title->getPrefixedText() . ']]' ), $title ];
 	}
 
 	public static function onBeforeParserFetchTemplateRevisionRecord( ?LinkTarget $contextTitle, LinkTarget $title,
