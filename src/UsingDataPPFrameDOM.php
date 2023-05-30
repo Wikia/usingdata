@@ -1,11 +1,5 @@
 <?php
 
-namespace UsingData;
-
-use Parser;
-use PPFrame;
-use PPFrame_Hash;
-
 class UsingDataPPFrameDOM extends PPFrame_Hash {
 	public $parent; // Parent frame (either from #using or #data, providing a parser if needed), data source title
 	public $sourcePage;
