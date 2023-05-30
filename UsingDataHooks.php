@@ -57,7 +57,9 @@ class UsingDataHooks {
 					$subParser->preprocess( $text, $fTitle, clone $parser->getOptions() );
 					// We might've blocked access to templates while preprocessing; should not be cached
 					$subParser->clearState();
-					$subParser->getOutput()->setText( $parser->getOutput()->getText() );
+					if ( $parser->getOutput()->hasText() ) {
+						$subParser->getOutput()->setText( $parser->getOutput()->getText() );
+					}
 					$wgHooks['ParserClearState'] = empty( $wgHooks['ParserClearState'] )
 						? $clearStateHooks
 						: array_merge( $clearStateHooks, $wgHooks['ParserClearState'] );
@@ -197,7 +199,7 @@ class UsingDataHooks {
 				];
 			}
 		}
-		
+
 		return [
 			isset( $args['default'] ) ? $parser->replaceVariables( $args['default'], $frame ) : '',
 			'markerType' => 'none'
