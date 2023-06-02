@@ -16,21 +16,15 @@
 	"ExtensionMessagesFiles": {
 		"UsingDataMagic": "UsingData.i18n.magic.php"
 	},
-	"AutoloadNamespaces": {
-		"UsingData\\": "src/"
-	},
-	"HookHandlers": {
-		"UsingDataHookHandler": {
-			"class": "UsingData\\UsingDataHooks",
-			"services": [ "MainConfig" ]
-		}
+	"AutoloadClasses": {
+		"UsingDataHooks": "src/UsingDataHooks.php",
+		"UsingDataPPFrameDOM": "src/UsingDataPPFrameDOM.php"
 	},
 	"Hooks": {
-		"BeforeParserFetchTemplateRevisionRecord": "UsingDataHookHandler",
-		"GetMagicVariableIDs": "UsingDataHookHandler",
-		"ParserFirstCallInit": "UsingDataHookHandler",
-		"ParserGetVariableValueSwitch": "UsingDataHookHandler",
-		"ParserClearState": "UsingDataHookHandler"
+		"BeforeParserFetchTemplateRevisionRecord": "UsingDataHooks::onBeforeParserFetchTemplateRevisionRecord",
+		"GetMagicVariableIDs": "UsingDataHooks::onGetMagicVariableIDs",
+		"ParserFirstCallInit": "UsingDataHooks::onParserFirstCallInit",
+		"ParserGetVariableValueSwitch": "UsingDataHooks::ancestorNameVar"
 	},
 	"manifest_version": 1
 }
