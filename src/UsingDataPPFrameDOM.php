@@ -1,6 +1,7 @@
 <?php
 
 class UsingDataPPFrameDOM extends PPFrame_Hash {
+	public $args;
 	public $parent; // Parent frame (either from #using or #data, providing a parser if needed), data source title
 	public $sourcePage;
 	public $knownFragments = []; // Specifies which fragments have been declared
