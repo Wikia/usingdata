@@ -1,37 +1,44 @@
 <?php
 
-class UsingDataPPFrameDOM extends PPFrame_Hash {
-	public $args;
-	public $parent; // Parent frame (either from #using or #data, providing a parser if needed), data source title
-	public $sourcePage;
-	public $knownFragments = []; // Specifies which fragments have been declared
-	public $pendingArgs = null; // Pending argument lists
-	public $serializedArgs = []; // Serialized wikitext cache for generic parsers
-	public $expandedArgs = [];
-	public $expansionForParser = null; // Expanded wikitext cache for a specific parser
-	public $overrideArgs = null; // Argument list and frame for expanding additional argument passed through #using
-	public $overrideFrame = null;
-	public $expansionFragment = ''; // Current expansion fragment; pure and normalized (prefix) form
-	public $expansionFragmentN = '##';
+namespace Fandom\UsingData;
 
-	public function __construct( PPFrame $inner, $pageName ) {
+use InvalidArgumentException;
+use MediaWiki\Parser\Parser;
+use MediaWiki\Parser\PPFrame;
+use MediaWiki\Parser\PPFrame_Hash;
+use MediaWiki\Parser\PPNode;
+use MediaWiki\Title\Title;
+
+class UsingDataPPFrameDOM extends PPFrame_Hash {
+	public PPFrame_Hash $parent; // Parent frame (from #using or #data, provides a parser if needed), data source title
+	public string $sourcePage;
+	public array $knownFragments = []; // Specifies which fragments have been declared
+	/** @var array{0:PPFrame,1:array} */
+	public array $pendingArgs = []; // Pending argument lists
+	public array $serializedArgs = []; // Serialized wikitext cache for generic parsers
+	public array $expandedArgs = [];
+	public ?Parser $expansionParser = null; // Expanded wikitext cache for a specific parser
+	public array $overrideArgs = []; // Frame and arguments overrides provided by calls to #using
+	public ?PPFrame $overrideFrame = null;
+	public string $expansionFragment = ''; // Current expansion fragment; pure and normalized (prefix) form
+	public string $expansionNormalizedFragment = '##';
+
+	public function __construct( PPFrame $inner, string $pageName ) {
+		if ( !$inner instanceof PPFrame_Hash ) {
+			throw new InvalidArgumentException( __CLASS__ . ' expects an instance of PPFrame_Hash' );
+		}
 		parent::__construct( $inner->preprocessor );
-		$this->args = [];
 		$this->parent = $inner;
 		$this->depth = $inner->depth + 1;
 		$this->title = $inner->title;
 		$this->sourcePage = $pageName;
 	}
 
-	public static function normalizeFragment( $fragment ) {
+	public static function normalizeFragment( string $fragment ): string {
 		return str_replace( '#', '# ', strtolower( $fragment ) ) . '##';
 	}
 
-	public function addArgs( $frame, $args, $fragment ) {
-		if ( $this->pendingArgs === null ) {
-			$this->pendingArgs = [];
-		}
-
+	public function addArgs( PPFrame $frame, array $args, string $fragment ): void {
 		$namedArgs = [];
 		$prefix = self::normalizeFragment( $fragment );
 		foreach ( $args as $k => $arg ) {
@@ -48,67 +55,73 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 		$this->knownFragments[$prefix] = true;
 	}
 
-	public function expandUsing( PPFrame $frame, $templateTitle, $text, $moreArgs, $fragment, $useRTP = false ) {
-		$oldParser = $this->expansionForParser;
-		$oldExpanded = $this->expandedArgs;
+	public function expandOn(
+		PPFrame $frame, ?Title $templateTitle, PPNode|string|null $text,
+		array $moreArgs, string $fragment, bool $useRTP = false
+	): string {
+		if ( !$frame instanceof PPFrame_Hash ) {
+			throw new InvalidArgumentException( __CLASS__ . ' expects an instance of PPFrame_Hash' );
+		}
+		$oldParser = $this->expansionParser;
 		$oldArgs = $this->overrideArgs;
 		$oldFrame = $this->overrideFrame;
 		$oldFragment = $this->expansionFragment;
-		$oldTitle =& $this->title;
+		$oldTitle = $this->title;
+		$oldExpanded = $this->expandedArgs;
 
-		$this->expansionForParser = $frame->parser;
-		$this->expansionFragment = $fragment;
+		$this->expansionParser = $frame->parser;
 		$this->overrideArgs = $moreArgs;
 		$this->overrideFrame = $frame;
-		$this->expansionFragmentN = self::normalizeFragment( $this->expansionFragment );
+		$this->expansionFragment = $fragment;
+		$this->expansionNormalizedFragment = self::normalizeFragment( $this->expansionFragment );
 		$this->title = is_object( $templateTitle ) ? $templateTitle : $frame->title;
 		if ( $oldParser != null && $oldParser !== $frame->parser && !empty( $this->expandedArgs ) ) {
 			$this->expandedArgs = [];
 		}
 
 		$ret = is_string( $text ) && $useRTP ?
-			$this->expansionForParser->replaceVariables( $text, $this ) :
+			$this->expansionParser->replaceVariables( $text, $this ) :
 			$this->expand( $text === null ? '' : $text );
 
 		$this->overrideArgs = $oldArgs;
-		$this->expansionFragment = $oldFragment;
 		$this->overrideFrame = $oldFrame;
-		$this->expansionFragmentN = self::normalizeFragment( $this->expansionFragment );
-		$this->title =& $oldTitle;
+		$this->expansionFragment = $oldFragment;
+		$this->expansionNormalizedFragment = self::normalizeFragment( $this->expansionFragment );
+		$this->title = $oldTitle;
 		if ( $oldParser != null ) {
-			$this->expansionForParser = $oldParser;
+			$this->expansionParser = $oldParser;
 			$this->expandedArgs = $oldExpanded;
 		}
 
 		return $ret;
 	}
 
-	public function hasFragment( $fragment ) {
+	public function hasFragment( string $fragment ): bool {
 		return isset( $this->knownFragments[self::normalizeFragment( $fragment )] );
 	}
 
-	public function isEmpty() {
-		return !isset( $this->knownFragments[$this->expansionFragmentN] );
+	public function isEmpty(): bool {
+		return !isset( $this->knownFragments[$this->expansionNormalizedFragment] );
 	}
 
-	public function getArgumentForParser( $parser, $normalizedFragment, $arg, $default = false ) {
-		$arg = $normalizedFragment . strval( $arg );
-		if ( isset( $this->expandedArgs[$arg] ) && $this->expansionForParser === $parser ) {
+	public function getArgumentForParser(
+		Parser $parser, string $normalizedFragment, ?string $arg, string|false $default = false
+	): string|false {
+		$arg = $normalizedFragment . $arg;
+		if ( isset( $this->expandedArgs[$arg] ) && $this->expansionParser === $parser ) {
 			return $this->expandedArgs[$arg];
 		}
 		if ( !isset( $this->serializedArgs[$arg] ) ) {
-			if ( $this->pendingArgs === null ) {
+			if ( !$this->pendingArgs ) {
 				return $default;
 			}
 			foreach ( $this->pendingArgs as &$aar ) {
 				if ( isset( $aar[1][$arg] ) ) {
 					$text = $aar[1][$arg];
 					unset( $aar[1][$arg] );
-					$text = $aar[0]->expand( $text );
-					if ( str_contains( $text, Parser::MARKER_PREFIX ) ) {
-						$text = $aar[0]->parser->serialiseHalfParsedText( ' ' . $text ); // MW bug 26731
-					}
-					$this->serializedArgs[$arg] = $text;
+					/** @var PPFrame $frame */
+					$frame = $aar[0];
+					$this->serializedArgs[$arg] = $frame->expand( $text );
 					break;
 				}
 			}
@@ -118,18 +131,20 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 			return $default;
 		}
 
-		$ret = $this->serializedArgs[$arg];
-		$ret = trim( is_array( $ret ) ? $parser->unserialiseHalfParsedText( $ret ) : $ret );
-		if ( $parser === $this->expansionForParser ) {
+		$ret = trim( $this->serializedArgs[$arg] );
+		if ( $parser === $this->expansionParser ) {
 			$this->expandedArgs[$arg] = $ret;
 		}
 		return $ret;
 	}
 
-	public function getArgument( $index ) {
-		switch ( $index ) {
+	/**
+	 * @suppress PhanTypeMismatchReturn
+	 */
+	public function getArgument( $name ): string|false {
+		switch ( $name ) {
 			case 'data-found':
-				return $this->isEmpty() ? null : '1';
+				return $this->isEmpty() ? '' : '1';
 			case 'data-source':
 				return $this->sourcePage;
 			case 'data-sourcee':
@@ -143,14 +158,15 @@ class UsingDataPPFrameDOM extends PPFrame_Hash {
 						( '#' . $this->expansionFragment )
 					);
 			default:
-				if ( is_array( $this->overrideArgs ) && isset( $this->overrideArgs[$index] ) ) {
-					if ( is_object( $this->overrideArgs[$index] ) ) {
-						$this->overrideArgs[$index] = $this->overrideFrame->expand( $this->overrideArgs[$index] );
+				if ( isset( $this->overrideArgs[$name] ) ) {
+					if ( is_object( $this->overrideArgs[$name] ) ) {
+						$this->overrideArgs[$name] = $this->overrideFrame->expand(
+							$this->overrideArgs[$name] );
 					}
-					return $this->overrideArgs[$index];
+					return $this->overrideArgs[$name];
 				}
-				$p = $this->expansionForParser === null ? $this->parent->parser : $this->expansionForParser;
-				return $this->getArgumentForParser( $p, $this->expansionFragmentN, $index, false );
+				$parser = $this->expansionParser ?? $this->parent->parser;
+				return $this->getArgumentForParser( $parser, $this->expansionNormalizedFragment, $name );
 		}
 	}
 }

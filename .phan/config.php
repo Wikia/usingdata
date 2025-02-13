@@ -2,6 +2,6 @@
 
 $config = require __DIR__ . '/../vendor/mediawiki/mediawiki-phan-config/src/config.php';
 
-$config['minimum_target_php_version'] = '8.0.28';
+$config['minimum_target_php_version'] = '8.1.0';
 
 return $config;

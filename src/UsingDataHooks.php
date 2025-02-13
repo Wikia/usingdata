@@ -1,146 +1,219 @@
 <?php
 
+namespace Fandom\UsingData;
+
+use MediaWiki\Hook\BeforeParserFetchTemplateRevisionRecordHook;
+use MediaWiki\Hook\GetMagicVariableIDsHook;
+use MediaWiki\Hook\ParserFirstCallInitHook;
+use MediaWiki\Hook\ParserGetVariableValueSwitchHook;
+use MediaWiki\HookContainer\HookRunner;
 use MediaWiki\Linker\LinkTarget;
+use MediaWiki\Parser\Parser;
+use MediaWiki\Parser\PPFrame;
+use MediaWiki\Parser\PPNode;
 use MediaWiki\Revision\RevisionRecord;
+use MediaWiki\Title\NamespaceInfo;
+use MediaWiki\Title\TitleFactory;
+use ReflectionProperty;
+use Title;
 
 /**
  * Registers and defines parser functions for UsingData.
  */
-class UsingDataHooks {
-	/**
-	 * @var UsingDataHooks Singleton instance
-	 */
-	public static $instance = null;
+class UsingDataHooks implements
+	ParserFirstCallInitHook,
+	GetMagicVariableIDsHook,
+	ParserGetVariableValueSwitchHook,
+	BeforeParserFetchTemplateRevisionRecordHook
+{
+	/** @var UsingDataPPFrameDOM[] Data frames for each page */
+	private array $dataFrames = [];
+
+	/** @var bool Whether we are currently searching for data */
+	private bool $isInDataSearchMode = false;
+
+	public function __construct(
+		private readonly TitleFactory $titleFactory,
+		private readonly NamespaceInfo $namespaceInfo,
+	) {
+	}
+
+	public function onParserFirstCallInit( $parser ): void {
+		$parser->setFunctionHook( 'using', $this->renderFunctionUsing( ... ), SFH_OBJECT_ARGS );
+		$parser->setFunctionHook( 'usingarg', $this->renderFunctionUsingArg( ... ), SFH_OBJECT_ARGS );
+		$parser->setFunctionHook( 'data', $this->renderFunctionData( ... ), SFH_OBJECT_ARGS );
+		$parser->setFunctionHook( 'ancestorname', $this->renderFunctionAcenstorName( ... ),
+			SFH_OBJECT_ARGS | SFH_NO_HASH );
+		$parser->setHook( 'using', $this->renderTagUsing( ... ) );
+	}
 
 	/**
-	 * @var UsingDataPPFrameDOM[] Data frames for each page
+	 * Tells MediaWiki that one or more magic word IDs should be treated as variables.
 	 */
-	private $dataFrames = [];
+	public function onGetMagicVariableIDs( &$variableIDs ): void {
+		$variableIDs[] = 'parentname';
+		$variableIDs[] = 'selfname';
+	}
 
 	/**
-	 * @var bool Whether we are currently searching for data
+	 * Handles {{PARENTNAME}}, {{SELFNAME}}
 	 */
-	private $searchingForData = false;
-
-	/**
-	 * @var array|null Arguments to override
-	 */
-	private static $phTitle = null;
-
-	public static function onParserFirstCallInit( Parser &$parser ) {
-		if ( self::$instance === null ) {
-			self::$instance = new self;
+	public function onParserGetVariableValueSwitch(
+		$parser, &$variableCache, $magicWordId, &$ret, $frame
+	): void {
+		if ( $magicWordId == 'parentname' ) {
+			$ret = $this->getAncestorName( $frame, 1 );
 		}
-		$parser->setFunctionHook( 'using', [ self::$instance, 'usingParserFunction' ], SFH_OBJECT_ARGS );
-		$parser->setFunctionHook( 'usingarg', [ self::$instance, 'usingArgParserFunction' ], SFH_OBJECT_ARGS );
-		$parser->setFunctionHook( 'data', [ self::$instance, 'dataParserFunction' ], SFH_OBJECT_ARGS );
-		$parser->setFunctionHook(
-			'ancestorname',
-			[ __CLASS__, 'ancestorNameFunction' ],
-			SFH_OBJECT_ARGS | SFH_NO_HASH
-		);
-		$parser->setHook( 'using', [ self::$instance, 'usingTag' ] );
+		if ( $magicWordId == 'selfname' ) {
+			$ret = $this->getAncestorName( $frame, 0 );
+		}
+	}
+
+	public function onBeforeParserFetchTemplateRevisionRecord(
+		?LinkTarget $contextTitle, LinkTarget $title,
+		bool &$skip, ?RevisionRecord &$revRecord
+	): bool {
+		if ( $this->isInDataSearchMode ) {
+			$skip = true;
+			return false;
+		}
 
 		return true;
 	}
 
 	/**
-	 * Tells MediaWiki that one or more magic word IDs should be treated as variables.
-	 *
-	 * @return void
+	 * Handles {{ANCESTORNAME:depth}}
 	 */
-	public static function onGetMagicVariableIDs( &$magicWords ) {
-		$magicWords[] = 'parentname';
-		$magicWords[] = 'selfname';
+	public function renderFunctionAcenstorName( Parser $parser, PPFrame $frame, array $args ): array {
+		$arg = $frame->expand( $args[0] );
+		return [
+			$this->getAncestorName( $frame, max( 0, is_numeric( $arg ) ? intval( $arg ) : 1 ) ),
+			'noparse' => true
+		];
+	}
+
+	/**
+	 * Returns the page title of the $depth ancestor of $frame; empty string if invalid
+	 */
+	private function getAncestorName( PPFrame $frame, int $depth ): string {
+		while ( $depth-- && $frame != null ) {
+			$frame = $frame->parent ?? null;
+		}
+		/** @phan-suppress-next-line PhanUndeclaredProperty PPFrame->title */
+		return is_object( $frame ) && isset( $frame->title ) && is_object( $frame->title )
+			/** @phan-suppress-next-line PhanUndeclaredProperty PPFrame->title */
+			? wfEscapeWikiText( $frame->title->getPrefixedText() ) : '';
 	}
 
 	/**
 	 * Returns a UsingData frame for a given page
 	 */
-	private function getDataFrame( $sourcePage, $title, &$parser, $frame ) {
-		global $wgHooks;
+	private function getDataFrame(
+		string $sourcePage, ?Title $title, Parser $parser, PPFrame $frame
+	): UsingDataPPFrameDOM {
 		if ( !isset( $this->dataFrames[$sourcePage] ) ) {
 			$this->dataFrames[$sourcePage] = new UsingDataPPFrameDOM( $frame, $sourcePage );
-			if ( $sourcePage != ''
-				 && ( $sourcePage != $parser->getTitle()->getPrefixedText() )
-				 || $parser->getOptions()->getIsSectionPreview() ) {
-				[ $text, $fTitle ] = $parser->fetchTemplateAndTitle( $title );
-				if ( is_object( $fTitle ) && $fTitle->getPrefixedText() != $sourcePage ) {
-					$this->dataFrames[$fTitle->getPrefixedText()] = $this->dataFrames[$sourcePage];
+			$parsingTitle = $this->titleFactory->castFromPageReference( $parser->getPage() );
+			if ( ( $sourcePage != '' && $sourcePage != $parsingTitle?->getPrefixedText() )
+				|| $parser->getOptions()->getIsSectionPreview()
+			) {
+				$text = null;
+				if ( $title ) {
+					[ $text, $title ] = $parser->fetchTemplateAndTitle( $title );
 				}
-				if ( is_string( $text ) && $text != '' ) {
-					$this->searchingForData = true;
-					$clearStateHooks = $wgHooks['ParserClearState'];
-					// Other extensions tend to assume the hook is only called by wgParser and reset internal state
-					$wgHooks['ParserClearState'] = [];
-					$subParser = clone $parser;
-					$subParser->preprocess( $text, $fTitle, clone $parser->getOptions() );
-					// We might've blocked access to templates while preprocessing; should not be cached
-					$subParser->clearState();
-					if ( $parser->getOutput()->hasText() ) {
-						$subParser->getOutput()->setText( $parser->getOutput()->getText() );
-					}
-					$wgHooks['ParserClearState'] = empty( $wgHooks['ParserClearState'] )
-						? $clearStateHooks
-						: array_merge( $clearStateHooks, $wgHooks['ParserClearState'] );
-					$parser->mPPNodeCount += $subParser->mPPNodeCount;
-					$this->searchingForData = false;
+				if ( $title && $title->getPrefixedText() != $sourcePage ) {
+					$this->dataFrames[$title->getPrefixedText()] = $this->dataFrames[$sourcePage];
+				}
+				if ( $text !== null ) {
+					$this->makeDataParserAndRun( $parser,
+						static function ( Parser $dataParser ) use ( $text, $title, $parser ) {
+							$dataParser->preprocess( $text, $title, clone $parser->getOptions() );
+							$parser->mPPNodeCount += $dataParser->mPPNodeCount;
+						}
+					);
 				}
 			}
 		}
 		return $this->dataFrames[$sourcePage];
 	}
 
-	/**
-	 * Returns the page title of the $depth ancestor of $frame; empty string if invalid
-	 */
-	private static function ancestorNameHandler( $frame, $depth ) {
-		while ( $depth-- && $frame != null ) {
-			$frame = $frame->parent ?? null;
+	private function makeDataParserAndRun( Parser $parser, callable $callback ): void {
+		$hookRunnerProperty = new ReflectionProperty( $parser, 'hookRunner' );
+		$originalHookRunner = $hookRunnerProperty->getValue( $parser );
+
+		$hookContainerProperty = new ReflectionProperty( $originalHookRunner, 'container' );
+		$hookContainer = $hookContainerProperty->getValue( $originalHookRunner );
+
+		$newHookRunner = new class ( $hookContainer ) extends HookRunner {
+			public function onParserClearState( $parser ): bool {
+				return true;
+			}
+		};
+
+		try {
+			$dataParser = clone $parser;
+			$hookRunnerProperty->setValue( $dataParser, $newHookRunner );
+			$callback( $dataParser );
+		} finally {
+			$this->isInDataSearchMode = false;
 		}
-		return is_object( $frame ) && isset( $frame->title ) && is_object( $frame->title )
-			? wfEscapeWikiText( $frame->title->getPrefixedText() ) : '';
 	}
 
 	/**
-	 * Handles {{ANCESTORNAME:depth}}
+	 * {{#using:Page#Hash|Template|Default|...}} parses Template using #data from Page's Hash fragment; or Default
+	 * if no data from Page can be found. Named arguments override those in the #data tag.
 	 */
-	public static function ancestorNameFunction( &$parser, $frame, $args ) {
-		$arg = $frame->expand( $args[0] );
-		return [
-			self::ancestorNameHandler( $frame, max( 0, is_numeric( $arg ) ? intval( $arg ) : 1 ) ),
-			'noparse' => true
-		];
+	public function renderFunctionUsing( Parser $parser, PPFrame $frame, array $args ): string {
+		$parse = $this->parseUsingCommons( $parser, $frame, $args );
+		if ( !is_array( $parse ) ) {
+			return '';
+		}
+
+		/** @var UsingDataPPFrameDOM $dataFrame */
+		[ $dataFrame, $fragment, $namedArgs, $templateTitle, $defaultValue ] = $parse;
+		if ( !$dataFrame->hasFragment( $fragment ) && $defaultValue !== null ) {
+			return $frame->expand( $defaultValue );
+		}
+		[ $dom, $title ] = $this->fetchTemplate( $parser, $templateTitle );
+		return $dataFrame->expandOn( $frame, $title, $dom, $namedArgs, $fragment );
 	}
 
 	/**
-	 * Handles {{PARENTNAME}}, {{SELFNAME}}, {{ANCESTORNAME}}
+	 * {{#usingarg:Page#Hash|Arg|Default}} returns the value of Arg data field on Page's Hash fragment, Default if
+	 * undefined.
 	 */
-	public static function ancestorNameVar( &$parser, &$varCache, &$index, &$ret, &$frame ) {
-		if ( $index == 'parentname' ) {
-			$ret = self::ancestorNameHandler( $frame, 1 );
+	public function renderFunctionUsingArg( Parser $parser, PPFrame $frame, array $args ) {
+		$parse = $this->parseUsingCommons( $parser, $frame, $args );
+		if ( !is_array( $parse ) ) {
+			return '';
 		}
-		if ( $index == 'selfname' ) {
-			$ret = self::ancestorNameHandler( $frame, 0 );
-		}
-		return true;
+
+		/** @var UsingDataPPFrameDOM $dataFrame */
+		[ $dataFrame, $fragment, $namedArgs, $argName, $defaultValue ] = $parse;
+		$ret = $dataFrame->getArgumentForParser(
+			$parser,
+			UsingDataPPFrameDOM::normalizeFragment( $fragment ),
+			$argName,
+			$defaultValue === null ? '' : false
+		);
+		return $ret !== false ? $ret : $frame->expand( $defaultValue );
 	}
 
 	/**
 	 * Parses common elements of #using syntax.
 	 */
-	private function usingParse( &$parser, $frame, $args ) {
-		if ( $this->searchingForData ) {
-			return '';
+	private function parseUsingCommons( Parser $parser, PPFrame $frame, array $args ): ?array {
+		if ( $this->isInDataSearchMode ) {
+			return null;
 		}
 
-		$titleArg = trim( $frame->expand( $args[0] ) );
-		if ( strpos( $titleArg, '%' ) !== false ) {
-			$titleArg = str_replace( [ '<', '>' ], [ '&lt;', '&gt;' ], urldecode( $titleArg ) );
+		$source = trim( $frame->expand( $args[0] ) );
+		if ( str_contains( $source, '%' ) ) {
+			$source = str_replace( [ '<', '>' ], [ '&lt;', '&gt;' ], urldecode( $source ) );
 		}
-		$title = \Title::newFromText( $titleArg, NS_MAIN );
+		$title = $this->titleFactory->newFromText( $source );
 		$sourcePage = is_object( $title ) ? $title->getPrefixedText() : '';
-		$sourceHash = is_object( $title ) ? $title->getFragment() : '';
+		$sourceFragment = is_object( $title ) ? $title->getFragment() : '';
 		$namedArgs = [];
 
 		$one = null;
@@ -159,45 +232,7 @@ class UsingDataHooks {
 				$namedArgs[trim( $frame->expand( $bits['name'] ) )] = $bits['value'];
 			}
 		}
-		return [ $this->getDataFrame( $sourcePage, $title, $parser, $frame ), $sourceHash, $namedArgs, $one, $two ];
-	}
-
-	/**
-	 * {{#using:Page#Hash|Template|Default|...}} parses Template using #data from Page's Hash fragment; or Default
-	 * if no data from Page can be found. Named arguments override those in the #data tag.
-	 */
-	public function usingParserFunction( &$parser, $frame, $args ) {
-		$parse = $this->usingParse( $parser, $frame, $args );
-		if ( !is_array( $parse ) ) {
-			return '';
-		}
-
-		[ $dframe, $fragment, $namedArgs, $templateTitle, $defaultValue ] = $parse;
-		if ( !$dframe->hasFragment( $fragment ) && $defaultValue !== null ) {
-			return $frame->expand( $defaultValue );
-		}
-		[ $dom, $title ] = $this->fetchTemplate( $parser, $templateTitle );
-		return $dframe->expandUsing( $frame, $title, $dom, $namedArgs, $fragment );
-	}
-
-	/**
-	 * {{#usingarg:Page#Hash|Arg|Default}} returns the value of Arg data field on Page's Hash fragment, Default if
-	 * undefined.
-	 */
-	public function usingArgParserFunction( &$parser, $frame, $args ) {
-		$parse = $this->usingParse( $parser, $frame, $args );
-		if ( !is_array( $parse ) ) {
-			return '';
-		}
-
-		[ $dframe, $fragment, $namedArgs, $argName, $defaultValue ] = $parse;
-		$ret = $dframe->getArgumentForParser(
-			$parser,
-			UsingDataPPFrameDOM::normalizeFragment( $fragment ),
-			$argName,
-			$defaultValue === null ? '' : false
-		);
-		return $ret !== false ? $ret : $frame->expand( $defaultValue );
+		return [ $this->getDataFrame( $sourcePage, $title, $parser, $frame ), $sourceFragment, $namedArgs, $one, $two ];
 	}
 
 	/**
@@ -208,27 +243,31 @@ class UsingDataHooks {
 	 * or using insertStripItem directly, is a viable short-term alternative -- but one that call certain hooks
 	 * prematurely, potentially causing other extensions to misbehave slightly.
 	 */
-	public function usingTag( $text, array $args, Parser $parser, PPFrame $frame ) {
-		if ( $this->searchingForData ) {
+	public function renderTagUsing(
+		string $text, array $args, Parser $parser, PPFrame $frame
+	): array {
+		if ( $this->isInDataSearchMode ) {
 			return [ '', 'markerType' => 'none' ];
 		}
 
 		$source = isset( $args['page'] ) ? $parser->replaceVariables( $args['page'], $frame ) : '';
 		unset( $args['page'] );
-		if ( strpos( $source, '%' ) !== false ) {
+		if ( str_contains( $source, '%' ) ) {
 			$source = str_replace( [ '<', '>' ], [ '&lt;', '&gt;' ], urldecode( $source ) );
 		}
-		$title = \Title::newFromText( $source, NS_MAIN );
+		$title = $this->titleFactory->newFromText( $source );
+
 		if ( is_object( $title ) ) {
-			$dframe = $this->getDataFrame( $title->getPrefixedText(), $title, $parser, $frame );
-			if ( is_object( $dframe ) && $dframe->hasFragment( $title->getFragment() ) ) {
+			$dataFrame = $this->getDataFrame( $title->getPrefixedText(), $title, $parser, $frame );
+			if ( $dataFrame->hasFragment( $title->getFragment() ) ) {
 				$ovr = [];
 				unset( $args['default'] );
 				foreach ( $args as $key => $val ) {
 					$ovr[$key] = $parser->replaceVariables( $val, $frame );
 				}
 				return [
-					$dframe->expandUsing( $frame, $frame->title, $text, $ovr, $title->getFragment(), true ),
+					/** @phan-suppress-next-line PhanUndeclaredProperty PPFrame->title */
+					$dataFrame->expandOn( $frame, $frame->title, $text, $ovr, $title->getFragment(), true ),
 					'markerType' => 'none'
 				];
 			}
@@ -243,86 +282,68 @@ class UsingDataHooks {
 	/**
 	 * {{#data:Template#Hash|...}} specifies data-transcludable arguments for the page; may not be transcluded.
 	 */
-	public function dataParserFunction( Parser &$parser, PPFrame $frame, $args ) {
-		$templateTitle = trim( $frame->expand( $args[0] ) );
+	public function renderFunctionData( Parser $parser, PPFrame $frame, array $args ): string {
+		/** @phan-suppress-next-line PhanUndeclaredProperty PPFrame->title */
 		$hostPage = $frame->title->getPrefixedText();
+
+		$templateName = trim( $frame->expand( $args[0] ) );
 		unset( $args[0] );
+		if ( str_contains( $templateName, '%' ) ) {
+			$templateName = str_replace( [ '<', '>' ], [ '&lt;', '&gt;' ], urldecode( $templateName ) );
+		}
+		$templateTitle = $this->titleFactory->newFromText( $templateName, NS_TEMPLATE );
+
 		$fragment = '';
-
-		if ( strpos( $templateTitle, '%' ) !== false ) {
-			$templateTitle = str_replace( [ '<', '>' ], [ '&lt;', '&gt;' ], urldecode( $templateTitle ) );
+		if ( is_object( $templateTitle ) ) {
+			$fragment = $templateTitle->getFragment();
+		} elseif ( $templateName != '' && $templateName[0] == '#' ) {
+			$fragment = substr( $templateName, 1 );
 		}
 
-		$templateTitleObj = \Title::newFromText( $templateTitle, NS_TEMPLATE );
-		if ( is_object( $templateTitleObj ) ) {
-			$fragment = $templateTitleObj->getFragment();
-		} elseif ( $templateTitle != '' && $templateTitle[0] == '#' ) {
-			$fragment = substr( $templateTitle, 1 );
-		}
-
-		if ( $frame->depth == 0 || $this->searchingForData ) {
-			if ( !isset( $this->dataFrames[$hostPage] ) ) {
-				$this->dataFrames[$hostPage] = new UsingDataPPFrameDOM( $frame, $hostPage );
-			}
-			$df =& $this->dataFrames[$hostPage];
-			$df->addArgs( $frame, $args, $fragment );
-			if ( $this->searchingForData ) {
+		if ( $frame->depth == 0 || $this->isInDataSearchMode ) {
+			$this->dataFrames[$hostPage] ??= new UsingDataPPFrameDOM( $frame, $hostPage );
+			$this->dataFrames[$hostPage]->addArgs( $frame, $args, $fragment );
+			if ( $this->isInDataSearchMode ) {
 				return '';
 			}
 		}
-		if ( !is_object( $templateTitleObj ) ) {
+		if ( !is_object( $templateTitle ) ) {
 			return '';
 		}
 
-		[ $dom, $tTitle ] = $this->fetchTemplate( $parser, $templateTitleObj );
-		foreach ( $args as $k => $v ) {
-			// Line below breaks #data processing, but it exists in old implementation
-			// $args[$k] = $v->node;
-		}
-		$cframe = $frame->newChild( $args, $tTitle );
-		$nargs =& $cframe->namedArgs;
-		$nargs['data-found'] = $frame->depth == 0 ? '3' : '2';
-		$nargs['data-source'] = $hostPage;
-		$nargs['data-sourcee'] = wfEscapeWikiText( $hostPage );
-		$nargs['data-fragment'] = $fragment;
-		$nargs['data-source-fragment'] = $hostPage . ( empty( $fragment ) ? '' : ( '#' . $fragment ) );
-		return $cframe->expand( $dom );
+		[ $dom, $templateTitle ] = $this->fetchTemplate( $parser, $templateTitle );
+		$childFrame = $frame->newChild( $args, $templateTitle );
+		/** @phan-suppress-next-line PhanUndeclaredProperty PPFrame->title */
+		$childFrame->namedArgs = array_merge( $childFrame->namedArgs ?? [], [
+			'data-found' => $frame->depth == 0 ? '3' : '2',
+			'data-source' => $hostPage,
+			'data-sourcee' => wfEscapeWikiText( $hostPage ),
+			'data-fragment' => $fragment,
+			'data-source-fragment' => $hostPage . ( empty( $fragment ) ? '' : ( '#' . $fragment ) ),
+		] );
+		return $childFrame->expand( $dom );
 	}
 
 	/**
 	 * Returns template text for transclusion.
+	 * @return array{0:PPNode|string|null,1:Title|null}
 	 */
-	private function fetchTemplate( $parser, $template ) {
-		global $wgNonincludableNamespaces;
-
-		if ( $template == '' || ( !is_string( $template ) && !is_object( $template ) ) ) {
-			return '';
+	private function fetchTemplate( Parser $parser, Title|string $template ): array {
+		if ( $template === '' ) {
+			return [ null, null ];
 		}
 
-		$title = is_object( $template ) ? $template : \Title::newFromText( $template, NS_TEMPLATE );
+		$title = is_object( $template ) ? $template
+			: $this->titleFactory->newFromText( $template, NS_TEMPLATE );
 		if ( !is_object( $title )
 			 || $title->getNamespace() == NS_SPECIAL
-			 || ( $wgNonincludableNamespaces && in_array( $title->getNamespace(), $wgNonincludableNamespaces ) ) ) {
+			 || $this->namespaceInfo->isNonincludable( $title->getNamespace() )
+		) {
 			return is_object( $title )
 				? [ '[[:' . $title->getPrefixedText() . ']]', $title ]
 				: [ '[[:' . $template . ']]', null ];
 		}
 		[ $dom, $title ] = $parser->getTemplateDom( $title );
 		return [ $dom ?: ( '[[:' . $title->getPrefixedText() . ']]' ), $title ];
-	}
-
-	public static function onBeforeParserFetchTemplateRevisionRecord( ?LinkTarget $contextTitle, LinkTarget $title,
-																	  bool &$skip, ?RevisionRecord &$revRecord ): bool {
-		if ( !self::$instance->searchingForData ) {
-			return true;
-		}
-		if ( self::$phTitle === null ) {
-			self::$phTitle = \Title::newFromText( 'UsingDataPlaceholderTitle', NS_MEDIAWIKI );
-		}
-
-		$title = self::$phTitle;
-		$skip = true;
-
-		return false;
 	}
 }
