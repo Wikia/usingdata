@@ -13,9 +13,9 @@ use MediaWiki\Parser\PPFrame;
 use MediaWiki\Parser\PPNode;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Title\NamespaceInfo;
+use MediaWiki\Title\Title;
 use MediaWiki\Title\TitleFactory;
 use ReflectionProperty;
-use Title;
 
 /**
  * Registers and defines parser functions for UsingData.
