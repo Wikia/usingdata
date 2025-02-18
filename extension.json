@@ -6,7 +6,7 @@
 	"license-name": "GPL-2.0-or-later",
 	"type": "parserhook",
 	"requires": {
-		"MediaWiki": ">= 1.39.0"
+		"MediaWiki": ">= 1.43.0"
 	},
 	"MessagesDirs": {
 		"UsingData": [
@@ -16,15 +16,20 @@
 	"ExtensionMessagesFiles": {
 		"UsingDataMagic": "UsingData.i18n.magic.php"
 	},
-	"AutoloadClasses": {
-		"UsingDataHooks": "src/UsingDataHooks.php",
-		"UsingDataPPFrameDOM": "src/UsingDataPPFrameDOM.php"
+	"AutoloadNamespaces": {
+		"Fandom\\UsingData\\": "src"
 	},
 	"Hooks": {
-		"BeforeParserFetchTemplateRevisionRecord": "UsingDataHooks::onBeforeParserFetchTemplateRevisionRecord",
-		"GetMagicVariableIDs": "UsingDataHooks::onGetMagicVariableIDs",
-		"ParserFirstCallInit": "UsingDataHooks::onParserFirstCallInit",
-		"ParserGetVariableValueSwitch": "UsingDataHooks::ancestorNameVar"
+		"BeforeParserFetchTemplateRevisionRecord": "main",
+		"GetMagicVariableIDs": "main",
+		"ParserFirstCallInit": "main",
+		"ParserGetVariableValueSwitch": "main"
+	},
+	"HookHandlers": {
+		"main": {
+			"class": "Fandom\\UsingData\\UsingDataHooks",
+			"services": ["TitleFactory", "NamespaceInfo"]
+		}
 	},
 	"manifest_version": 1
 }
