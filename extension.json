@@ -20,7 +20,6 @@
 		"Fandom\\UsingData\\": "src"
 	},
 	"Hooks": {
-		"BeforeParserFetchTemplateRevisionRecord": "main",
 		"GetMagicVariableIDs": "main",
 		"ParserFirstCallInit": "main",
 		"ParserGetVariableValueSwitch": "main"

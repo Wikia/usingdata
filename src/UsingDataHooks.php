@@ -2,15 +2,12 @@
 
 namespace Fandom\UsingData;
 
-use MediaWiki\Hook\BeforeParserFetchTemplateRevisionRecordHook;
 use MediaWiki\Hook\GetMagicVariableIDsHook;
 use MediaWiki\Hook\ParserFirstCallInitHook;
 use MediaWiki\Hook\ParserGetVariableValueSwitchHook;
-use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\PPFrame;
 use MediaWiki\Parser\PPNode;
-use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Title\NamespaceInfo;
 use MediaWiki\Title\Title;
 use MediaWiki\Title\TitleFactory;
@@ -21,14 +18,10 @@ use MediaWiki\Title\TitleFactory;
 class UsingDataHooks implements
 	ParserFirstCallInitHook,
 	GetMagicVariableIDsHook,
-	ParserGetVariableValueSwitchHook,
-	BeforeParserFetchTemplateRevisionRecordHook
+	ParserGetVariableValueSwitchHook
 {
 	/** @var UsingDataPPFrameDOM[] Data frames for each page */
 	private array $dataFrames = [];
-
-	/** @var bool Whether we are currently searching for data */
-	private bool $isInDataSearchMode = false;
 
 	public function __construct(
 		private readonly TitleFactory $titleFactory,
@@ -65,18 +58,6 @@ class UsingDataHooks implements
 		if ( $magicWordId == 'selfname' ) {
 			$ret = $this->getAncestorName( $frame, 0 );
 		}
-	}
-
-	public function onBeforeParserFetchTemplateRevisionRecord(
-		?LinkTarget $contextTitle, LinkTarget $title,
-		bool &$skip, ?RevisionRecord &$revRecord
-	): bool {
-		if ( $this->isInDataSearchMode ) {
-			$skip = true;
-			return false;
-		}
-
-		return true;
 	}
 
 	/**
@@ -170,10 +151,6 @@ class UsingDataHooks implements
 	 * Parses common elements of #using syntax.
 	 */
 	private function parseUsingCommons( Parser $parser, PPFrame $frame, array $args ): ?array {
-		if ( $this->isInDataSearchMode ) {
-			return null;
-		}
-
 		$source = trim( $frame->expand( $args[0] ) );
 		if ( str_contains( $source, '%' ) ) {
 			$source = str_replace( [ '<', '>' ], [ '&lt;', '&gt;' ], urldecode( $source ) );
@@ -213,10 +190,6 @@ class UsingDataHooks implements
 	public function renderTagUsing(
 		string $text, array $args, Parser $parser, PPFrame $frame
 	): array {
-		if ( $this->isInDataSearchMode ) {
-			return [ '', 'markerType' => 'none' ];
-		}
-
 		$source = isset( $args['page'] ) ? $parser->replaceVariables( $args['page'], $frame ) : '';
 		unset( $args['page'] );
 		if ( str_contains( $source, '%' ) ) {
@@ -267,12 +240,9 @@ class UsingDataHooks implements
 			$fragment = substr( $templateName, 1 );
 		}
 
-		if ( $frame->depth == 0 || $this->isInDataSearchMode ) {
+		if ( $frame->depth == 0 ) {
 			$this->dataFrames[$hostPage] ??= new UsingDataPPFrameDOM( $frame, $hostPage );
 			$this->dataFrames[$hostPage]->addArgs( $frame, $args, $fragment );
-			if ( $this->isInDataSearchMode ) {
-				return '';
-			}
 		}
 		if ( !is_object( $templateTitle ) ) {
 			return '';
