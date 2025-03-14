@@ -151,6 +151,7 @@ class UsingDataHooks implements
 		};
 
 		try {
+			$this->isInDataSearchMode = true;
 			$dataParser = clone $parser;
 			$hookRunnerProperty->setValue( $dataParser, $newHookRunner );
 			$callback( $dataParser );
