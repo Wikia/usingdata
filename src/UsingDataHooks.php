@@ -6,7 +6,6 @@ use MediaWiki\Hook\BeforeParserFetchTemplateRevisionRecordHook;
 use MediaWiki\Hook\GetMagicVariableIDsHook;
 use MediaWiki\Hook\ParserFirstCallInitHook;
 use MediaWiki\Hook\ParserGetVariableValueSwitchHook;
-use MediaWiki\HookContainer\HookRunner;
 use MediaWiki\Linker\LinkTarget;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\PPFrame;
@@ -15,7 +14,6 @@ use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Title\NamespaceInfo;
 use MediaWiki\Title\Title;
 use MediaWiki\Title\TitleFactory;
-use ReflectionProperty;
 
 /**
  * Registers and defines parser functions for UsingData.
@@ -117,46 +115,15 @@ class UsingDataHooks implements
 			if ( ( $sourcePage != '' && $sourcePage != $parsingTitle?->getPrefixedText() )
 				|| $parser->getOptions()->getIsSectionPreview()
 			) {
-				$text = null;
 				if ( $title ) {
 					[ $text, $title ] = $parser->fetchTemplateAndTitle( $title );
 				}
 				if ( $title && $title->getPrefixedText() != $sourcePage ) {
 					$this->dataFrames[$title->getPrefixedText()] = $this->dataFrames[$sourcePage];
 				}
-				if ( $text !== null ) {
-					$this->makeDataParserAndRun( $parser,
-						static function ( Parser $dataParser ) use ( $text, $title, $parser ) {
-							$dataParser->preprocess( $text, $title, clone $parser->getOptions() );
-							$parser->mPPNodeCount += $dataParser->mPPNodeCount;
-						}
-					);
-				}
 			}
 		}
 		return $this->dataFrames[$sourcePage];
-	}
-
-	private function makeDataParserAndRun( Parser $parser, callable $callback ): void {
-		$hookRunnerProperty = new ReflectionProperty( $parser, 'hookRunner' );
-		$originalHookRunner = $hookRunnerProperty->getValue( $parser );
-
-		$hookContainerProperty = new ReflectionProperty( $originalHookRunner, 'container' );
-		$hookContainer = $hookContainerProperty->getValue( $originalHookRunner );
-
-		$newHookRunner = new class ( $hookContainer ) extends HookRunner {
-			public function onParserClearState( $parser ): bool {
-				return true;
-			}
-		};
-
-		try {
-			$dataParser = clone $parser;
-			$hookRunnerProperty->setValue( $dataParser, $newHookRunner );
-			$callback( $dataParser );
-		} finally {
-			$this->isInDataSearchMode = false;
-		}
 	}
 
 	/**
