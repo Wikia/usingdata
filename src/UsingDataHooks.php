@@ -138,10 +138,10 @@ class UsingDataHooks implements
 	}
 
 	private function makeDataParserAndRun( Parser $parser, callable $callback ): void {
-		$hookRunnerProperty = new ReflectionProperty( $parser, 'hookRunner' );
+		$hookRunnerProperty = new ReflectionProperty( Parser::class, 'hookRunner' );
 		$originalHookRunner = $hookRunnerProperty->getValue( $parser );
 
-		$hookContainerProperty = new ReflectionProperty( $originalHookRunner, 'container' );
+		$hookContainerProperty = new ReflectionProperty( HookRunner::class, 'container' );
 		$hookContainer = $hookContainerProperty->getValue( $originalHookRunner );
 
 		$newHookRunner = new class ( $hookContainer ) extends HookRunner {
@@ -151,6 +151,7 @@ class UsingDataHooks implements
 		};
 
 		try {
+			$this->isInDataSearchMode = true;
 			$dataParser = clone $parser;
 			$hookRunnerProperty->setValue( $dataParser, $newHookRunner );
 			$callback( $dataParser );
